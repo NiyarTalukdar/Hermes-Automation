@@ -1,0 +1,3 @@
+GitAccessToken.txt
+*.token
+.env
