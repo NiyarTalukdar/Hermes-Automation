@@ -1,6 +1,7 @@
 name: "📊 Publish Dashboard to GitHub Pages"
 
 on:
+  workflow_dispatch:   # allows manual trigger from Actions tab
   push:
     branches: [main]
     paths:
