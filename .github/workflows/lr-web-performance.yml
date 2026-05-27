@@ -1,0 +1,446 @@
+name: "🌐 LoadRunner Web HTTP/HTML Performance Test"
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      # ── Target ────────────────────────────────────────────────
+      environment:
+        description: "Target Environment"
+        required: true
+        type: choice
+        options: [dev, staging, production]
+        default: staging
+
+      # ── Scenario Design (mirrors PC Scenario Designer) ────────
+      test_scenario:
+        description: "Scenario Type"
+        required: true
+        type: choice
+        options: [smoke, load, stress, endurance, spike, browser-mix]
+        default: load
+
+      scheduler_mode:
+        description: "Scheduler Mode"
+        required: true
+        type: choice
+        options:
+          - real_world         # Ramp up → Steady state → Ramp down
+          - goal_oriented      # LR finds VUser count to hit a TPS/RT goal
+          - basic              # Fixed VUsers for fixed duration
+        default: real_world
+
+      vuser_count:
+        description: "Virtual User Count (ignored in goal_oriented mode)"
+        required: true
+        default: "100"
+
+      ramp_up_minutes:
+        description: "Ramp-Up Duration (min)"
+        required: true
+        default: "3"
+
+      steady_state_minutes:
+        description: "Steady State / Test Duration (min)"
+        required: true
+        default: "15"
+
+      ramp_down_minutes:
+        description: "Ramp-Down Duration (min) — real_world mode only"
+        required: false
+        default: "2"
+
+      # Goal-oriented inputs
+      goal_metric:
+        description: "Goal Metric (goal_oriented only)"
+        required: false
+        type: choice
+        options: [hits_per_second, transactions_per_second, pages_per_minute, response_time]
+        default: transactions_per_second
+
+      goal_value:
+        description: "Goal Target Value (e.g. 50 for 50 TPS)"
+        required: false
+        default: "50"
+
+      goal_max_vusers:
+        description: "Max VUsers (goal_oriented only)"
+        required: false
+        default: "300"
+
+      # ── Runtime Settings ──────────────────────────────────────
+      think_time_mode:
+        description: "Think Time"
+        required: true
+        type: choice
+        options:
+          - as_recorded
+          - ignore
+          - multiply
+          - random_percentage
+          - fixed_seconds
+        default: as_recorded
+
+      think_time_value:
+        description: "Think Time Value (multiplier / fixed secs / random max%)"
+        required: false
+        default: "1.0"
+
+      think_time_min_pct:
+        description: "Think Time Random Min % (random_percentage only)"
+        required: false
+        default: "50"
+
+      think_time_max_pct:
+        description: "Think Time Random Max % (random_percentage only)"
+        required: false
+        default: "150"
+
+      pacing_mode:
+        description: "Iteration Pacing"
+        required: true
+        type: choice
+        options:
+          - immediately
+          - fixed_delay
+          - random_delay
+          - fixed_from_iteration_start
+          - random_from_iteration_start
+        default: immediately
+
+      pacing_min_seconds:
+        description: "Pacing Min Seconds (random modes) / Fixed Seconds (fixed modes)"
+        required: false
+        default: "0"
+
+      pacing_max_seconds:
+        description: "Pacing Max Seconds (random modes only)"
+        required: false
+        default: "10"
+
+      iteration_count:
+        description: "Iterations per VUser (0 = run for full duration)"
+        required: false
+        default: "0"
+
+      # ── Browser / Network ─────────────────────────────────────
+      browser_emulation:
+        description: "Browser Emulation"
+        required: false
+        type: choice
+        options: [chrome, firefox, ie11, mobile-android, mobile-ios, none]
+        default: chrome
+
+      network_speed:
+        description: "Network Speed Simulation"
+        required: false
+        type: choice
+        options: [unlimited, cable_10mbps, dsl_2mbps, gprs_56kbps, modem_28kbps]
+        default: unlimited
+
+      simulate_cache:
+        description: "Simulate Browser Cache"
+        required: false
+        type: choice
+        options: [enabled, disabled]
+        default: enabled
+
+      download_non_html:
+        description: "Download Non-HTML Resources (images, CSS, JS)"
+        required: false
+        type: choice
+        options: [enabled, disabled]
+        default: enabled
+
+      # ── Logging & Error Handling ──────────────────────────────
+      log_level:
+        description: "VUser Log Level"
+        required: false
+        type: choice
+        options: [none, errors_only, extended, full]
+        default: errors_only
+
+      on_error:
+        description: "On Error Action"
+        required: false
+        type: choice
+        options:
+          - continue_to_next_iteration
+          - continue_to_next_action
+          - stop_vuser
+          - stop_test
+        default: continue_to_next_iteration
+
+  schedule:
+    - cron: "0 3 * * 1-5"
+  push:
+    branches: [main, release/**]
+    paths: ["scripts/web/**", "configs/**"]
+
+concurrency:
+  group: lr-web-${{ github.ref }}-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+env:
+  LR_PROTOCOL: WEB
+  RESULTS_DIR: results/${{ github.run_id }}
+
+jobs:
+
+  preflight:
+    name: "✅ Pre-flight & Parameter Resolution"
+    runs-on: ubuntu-latest
+    outputs:
+      environment:        ${{ steps.p.outputs.environment }}
+      scenario:           ${{ steps.p.outputs.scenario }}
+      scheduler_mode:     ${{ steps.p.outputs.scheduler_mode }}
+      vusers:             ${{ steps.p.outputs.vusers }}
+      ramp_up:            ${{ steps.p.outputs.ramp_up }}
+      steady_state:       ${{ steps.p.outputs.steady_state }}
+      ramp_down:          ${{ steps.p.outputs.ramp_down }}
+      total_duration:     ${{ steps.p.outputs.total_duration }}
+      goal_metric:        ${{ steps.p.outputs.goal_metric }}
+      goal_value:         ${{ steps.p.outputs.goal_value }}
+      goal_max_vusers:    ${{ steps.p.outputs.goal_max_vusers }}
+      think_time_mode:    ${{ steps.p.outputs.think_time_mode }}
+      think_time_value:   ${{ steps.p.outputs.think_time_value }}
+      think_time_min_pct: ${{ steps.p.outputs.think_time_min_pct }}
+      think_time_max_pct: ${{ steps.p.outputs.think_time_max_pct }}
+      pacing_mode:        ${{ steps.p.outputs.pacing_mode }}
+      pacing_min:         ${{ steps.p.outputs.pacing_min }}
+      pacing_max:         ${{ steps.p.outputs.pacing_max }}
+      iteration_count:    ${{ steps.p.outputs.iteration_count }}
+      browser:            ${{ steps.p.outputs.browser }}
+      network_speed:      ${{ steps.p.outputs.network_speed }}
+      simulate_cache:     ${{ steps.p.outputs.simulate_cache }}
+      download_non_html:  ${{ steps.p.outputs.download_non_html }}
+      log_level:          ${{ steps.p.outputs.log_level }}
+      on_error:           ${{ steps.p.outputs.on_error }}
+
+    steps:
+      - name: Resolve parameters
+        id: p
+        run: |
+          RAMP_UP="${{ inputs.ramp_up_minutes || '3' }}"
+          STEADY="${{ inputs.steady_state_minutes || '15' }}"
+          RAMP_DOWN="${{ inputs.ramp_down_minutes || '2' }}"
+          TOTAL=$(( ${RAMP_UP} + ${STEADY} + ${RAMP_DOWN} ))
+
+          echo "environment=${{ inputs.environment || 'staging' }}"                      >> $GITHUB_OUTPUT
+          echo "scenario=${{ inputs.test_scenario || 'load' }}"                          >> $GITHUB_OUTPUT
+          echo "scheduler_mode=${{ inputs.scheduler_mode || 'real_world' }}"             >> $GITHUB_OUTPUT
+          echo "vusers=${{ inputs.vuser_count || '100' }}"                               >> $GITHUB_OUTPUT
+          echo "ramp_up=${RAMP_UP}"                                                      >> $GITHUB_OUTPUT
+          echo "steady_state=${STEADY}"                                                  >> $GITHUB_OUTPUT
+          echo "ramp_down=${RAMP_DOWN}"                                                  >> $GITHUB_OUTPUT
+          echo "total_duration=${TOTAL}"                                                 >> $GITHUB_OUTPUT
+          echo "goal_metric=${{ inputs.goal_metric || 'transactions_per_second' }}"      >> $GITHUB_OUTPUT
+          echo "goal_value=${{ inputs.goal_value || '50' }}"                             >> $GITHUB_OUTPUT
+          echo "goal_max_vusers=${{ inputs.goal_max_vusers || '300' }}"                  >> $GITHUB_OUTPUT
+          echo "think_time_mode=${{ inputs.think_time_mode || 'as_recorded' }}"          >> $GITHUB_OUTPUT
+          echo "think_time_value=${{ inputs.think_time_value || '1.0' }}"                >> $GITHUB_OUTPUT
+          echo "think_time_min_pct=${{ inputs.think_time_min_pct || '50' }}"             >> $GITHUB_OUTPUT
+          echo "think_time_max_pct=${{ inputs.think_time_max_pct || '150' }}"            >> $GITHUB_OUTPUT
+          echo "pacing_mode=${{ inputs.pacing_mode || 'immediately' }}"                  >> $GITHUB_OUTPUT
+          echo "pacing_min=${{ inputs.pacing_min_seconds || '0' }}"                      >> $GITHUB_OUTPUT
+          echo "pacing_max=${{ inputs.pacing_max_seconds || '10' }}"                     >> $GITHUB_OUTPUT
+          echo "iteration_count=${{ inputs.iteration_count || '0' }}"                    >> $GITHUB_OUTPUT
+          echo "browser=${{ inputs.browser_emulation || 'chrome' }}"                     >> $GITHUB_OUTPUT
+          echo "network_speed=${{ inputs.network_speed || 'unlimited' }}"                >> $GITHUB_OUTPUT
+          echo "simulate_cache=${{ inputs.simulate_cache || 'enabled' }}"                >> $GITHUB_OUTPUT
+          echo "download_non_html=${{ inputs.download_non_html || 'enabled' }}"          >> $GITHUB_OUTPUT
+          echo "log_level=${{ inputs.log_level || 'errors_only' }}"                      >> $GITHUB_OUTPUT
+          echo "on_error=${{ inputs.on_error || 'continue_to_next_iteration' }}"         >> $GITHUB_OUTPUT
+
+      - name: Write job summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 🌐 Web HTTP Test — Run Configuration
+          | Setting | Value |
+          |---------|-------|
+          | Environment | `${{ inputs.environment }}` |
+          | Scenario | `${{ inputs.test_scenario }}` |
+          | Scheduler | `${{ inputs.scheduler_mode }}` |
+          | VUsers | `${{ inputs.vuser_count }}` |
+          | Ramp Up | `${{ inputs.ramp_up_minutes }}m` |
+          | Steady State | `${{ inputs.steady_state_minutes }}m` |
+          | Ramp Down | `${{ inputs.ramp_down_minutes }}m` |
+          | Think Time | `${{ inputs.think_time_mode }}` → `${{ inputs.think_time_value }}` |
+          | Pacing | `${{ inputs.pacing_mode }}` |
+          | Browser | `${{ inputs.browser_emulation }}` |
+          | Network | `${{ inputs.network_speed }}` |
+          | Cache | `${{ inputs.simulate_cache }}` |
+          | On Error | `${{ inputs.on_error }}` |
+          | Log Level | `${{ inputs.log_level }}` |
+          EOF
+
+  observability-start:
+    name: "📡 Mark Test Start (APM)"
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dynatrace event
+        run: |
+          curl -sf -X POST \
+            "https://${{ secrets.DT_ENVIRONMENT_ID }}.live.dynatrace.com/api/v2/events/ingest" \
+            -H "Authorization: Api-Token ${{ secrets.DT_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "eventType": "CUSTOM_ANNOTATION",
+              "title": "LR Web HTTP Test Started",
+              "properties": {
+                "environment":    "${{ needs.preflight.outputs.environment }}",
+                "scenario":       "${{ needs.preflight.outputs.scenario }}",
+                "scheduler_mode": "${{ needs.preflight.outputs.scheduler_mode }}",
+                "vusers":         "${{ needs.preflight.outputs.vusers }}",
+                "think_time":     "${{ needs.preflight.outputs.think_time_mode }}",
+                "browser":        "${{ needs.preflight.outputs.browser }}",
+                "github_run":     "${{ github.run_id }}",
+                "protocol":       "WEB_HTTP"
+              }
+            }' || echo "⚠️ DT event failed — non-blocking"
+
+      - name: AppDynamics event
+        run: |
+          curl -sf -X POST \
+            "https://${{ secrets.APPDYNAMICS_CONTROLLER_URL }}/controller/rest/applications/${{ secrets.APPDYNAMICS_APP_ID }}/events" \
+            -H "Content-Type: application/json" \
+            -u "${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}@${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}:${{ secrets.APPDYNAMICS_API_KEY }}" \
+            -d '{
+              "summary": "LR Web HTTP Test Start",
+              "comment": "Scenario: ${{ needs.preflight.outputs.scenario }} | VUsers: ${{ needs.preflight.outputs.vusers }}",
+              "eventtype": "CUSTOM", "severity": "INFO",
+              "customeventtype": "PERFORMANCE_TEST_START"
+            }' || echo "⚠️ AppD event failed — non-blocking"
+
+  run-lr-web-test:
+    name: "⚡ Execute Web HTTP Load Test"
+    needs: [preflight, observability-start]
+    runs-on: [self-hosted, loadrunner, windows]
+    env:
+      LR_ENV:              ${{ needs.preflight.outputs.environment }}
+      LR_SCENARIO:         ${{ needs.preflight.outputs.scenario }}
+      LR_SCHEDULER_MODE:   ${{ needs.preflight.outputs.scheduler_mode }}
+      LR_VUSERS:           ${{ needs.preflight.outputs.vusers }}
+      LR_RAMP_UP:          ${{ needs.preflight.outputs.ramp_up }}
+      LR_STEADY:           ${{ needs.preflight.outputs.steady_state }}
+      LR_RAMP_DOWN:        ${{ needs.preflight.outputs.ramp_down }}
+      LR_TOTAL_DURATION:   ${{ needs.preflight.outputs.total_duration }}
+      LR_GOAL_METRIC:      ${{ needs.preflight.outputs.goal_metric }}
+      LR_GOAL_VALUE:       ${{ needs.preflight.outputs.goal_value }}
+      LR_GOAL_MAX_VUSERS:  ${{ needs.preflight.outputs.goal_max_vusers }}
+      LR_THINK_TIME_MODE:  ${{ needs.preflight.outputs.think_time_mode }}
+      LR_THINK_TIME_VALUE: ${{ needs.preflight.outputs.think_time_value }}
+      LR_THINK_TIME_MIN:   ${{ needs.preflight.outputs.think_time_min_pct }}
+      LR_THINK_TIME_MAX:   ${{ needs.preflight.outputs.think_time_max_pct }}
+      LR_PACING_MODE:      ${{ needs.preflight.outputs.pacing_mode }}
+      LR_PACING_MIN:       ${{ needs.preflight.outputs.pacing_min }}
+      LR_PACING_MAX:       ${{ needs.preflight.outputs.pacing_max }}
+      LR_ITERATIONS:       ${{ needs.preflight.outputs.iteration_count }}
+      LR_BROWSER:          ${{ needs.preflight.outputs.browser }}
+      LR_NETWORK_SPEED:    ${{ needs.preflight.outputs.network_speed }}
+      LR_SIMULATE_CACHE:   ${{ needs.preflight.outputs.simulate_cache }}
+      LR_DOWNLOAD_NONHTML: ${{ needs.preflight.outputs.download_non_html }}
+      LR_LOG_LEVEL:        ${{ needs.preflight.outputs.log_level }}
+      LR_ON_ERROR:         ${{ needs.preflight.outputs.on_error }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate with LR Controller
+        shell: pwsh
+        run: |
+          $securePass = ConvertTo-SecureString "${{ secrets.LR_SCRIPT_PASSWORD }}" -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential("${{ secrets.LR_SCRIPT_USERNAME }}", $securePass)
+          $session = New-PSSession -ComputerName "${{ secrets.LR_CONTROLLER_HOST }}" -Credential $cred -ErrorAction Stop
+          Write-Host "✅ Authenticated as ${{ secrets.LR_SCRIPT_USERNAME }}"
+
+      - name: Configure scenario + runtime settings
+        shell: pwsh
+        run: |
+          & ".\scripts\configure-web-scenario.ps1" `
+            -ScenarioFile    "scripts\web\$env:LR_SCENARIO.lrs" `
+            -SchedulerMode   $env:LR_SCHEDULER_MODE `
+            -VUsers          $env:LR_VUSERS `
+            -RampUpMin       $env:LR_RAMP_UP `
+            -SteadyMin       $env:LR_STEADY `
+            -RampDownMin     $env:LR_RAMP_DOWN `
+            -GoalMetric      $env:LR_GOAL_METRIC `
+            -GoalValue       $env:LR_GOAL_VALUE `
+            -GoalMaxVUsers   $env:LR_GOAL_MAX_VUSERS `
+            -ThinkTimeMode   $env:LR_THINK_TIME_MODE `
+            -ThinkTimeValue  $env:LR_THINK_TIME_VALUE `
+            -ThinkTimeMinPct $env:LR_THINK_TIME_MIN `
+            -ThinkTimeMaxPct $env:LR_THINK_TIME_MAX `
+            -PacingMode      $env:LR_PACING_MODE `
+            -PacingMinSec    $env:LR_PACING_MIN `
+            -PacingMaxSec    $env:LR_PACING_MAX `
+            -Iterations      $env:LR_ITERATIONS `
+            -Browser         $env:LR_BROWSER `
+            -NetworkSpeed    $env:LR_NETWORK_SPEED `
+            -SimulateCache   ($env:LR_SIMULATE_CACHE -eq 'enabled') `
+            -DownloadNonHtml ($env:LR_DOWNLOAD_NONHTML -eq 'enabled') `
+            -LogLevel        $env:LR_LOG_LEVEL `
+            -OnError         $env:LR_ON_ERROR `
+            -TargetEnv       $env:LR_ENV `
+            -LicenseServer   "${{ secrets.LR_LICENSE_SERVER }}"
+
+      - name: Run scenario
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "$env:RESULTS_DIR" -Force | Out-Null
+          & ".\scripts\run-lr-scenario.ps1" `
+            -ScenarioFile   "scripts\web\$env:LR_SCENARIO`_patched.lrs" `
+            -ResultsPath    "$env:RESULTS_DIR" `
+            -TimeoutMinutes (($env:LR_TOTAL_DURATION -as [int]) + 20)
+
+      - name: Validate SLA
+        shell: pwsh
+        run: |
+          & ".\scripts\validate-sla.ps1" `
+            -ResultsPath "$env:RESULTS_DIR" `
+            -SlaConfig   "configs\sla-web-$env:LR_SCENARIO.json" `
+            -Protocol    "WEB"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lr-web-results-${{ github.run_id }}
+          path: ${{ env.RESULTS_DIR }}/**
+          retention-days: 30
+
+  observability-end:
+    name: "📊 Publish Metrics (APM)"
+    needs: [preflight, run-lr-web-test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: lr-web-results-${{ github.run_id }}
+          path: results/
+      - name: Push to Dynatrace
+        run: |
+          python3 scripts/push_to_dynatrace.py \
+            --env-id "${{ secrets.DT_ENVIRONMENT_ID }}" \
+            --api-token "${{ secrets.DT_API_TOKEN }}" \
+            --results-dir results/ --protocol web \
+            --run-id "${{ github.run_id }}" \
+            --scenario "${{ needs.preflight.outputs.scenario }}"
+      - name: Push to AppDynamics
+        run: |
+          python3 scripts/push_to_appdynamics.py \
+            --controller "${{ secrets.APPDYNAMICS_CONTROLLER_URL }}" \
+            --account "${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}" \
+            --api-key "${{ secrets.APPDYNAMICS_API_KEY }}" \
+            --app-id "${{ secrets.APPDYNAMICS_APP_ID }}" \
+            --results-dir results/ --protocol web
+      - name: Update dashboard
+        run: |
+          python3 scripts/update_dashboard.py \
+            --results-dir results/ --run-id "${{ github.run_id }}" \
+            --protocol web --scenario "${{ needs.preflight.outputs.scenario }}" \
+            --environment "${{ needs.preflight.outputs.environment }}" \
+            --status "${{ needs.run-lr-web-test.result }}"
