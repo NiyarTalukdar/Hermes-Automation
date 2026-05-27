@@ -271,6 +271,7 @@ jobs:
           EOF
 
   observability-start:
+    continue-on-error: true
     name: "📡 Mark Test Start (APM)"
     needs: preflight
     runs-on: ubuntu-latest
@@ -400,6 +401,7 @@ jobs:
           retention-days: 30
 
   observability-end:
+    continue-on-error: true
     name: "📊 Publish Metrics (APM)"
     needs: [preflight, run-lr-api-test]
     runs-on: ubuntu-latest
