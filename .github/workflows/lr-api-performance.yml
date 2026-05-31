@@ -145,10 +145,6 @@ on:
         required: false
         default: "120"
 
-      max_connections_per_host:
-        description: "Max Connections Per Host"
-        required: false
-        default: "50"
 
       keep_alive:
         description: "HTTP Keep-Alive"
@@ -224,7 +220,6 @@ jobs:
       iteration_count:       ${{ steps.p.outputs.iteration_count }}
       conn_timeout:          ${{ steps.p.outputs.conn_timeout }}
       req_timeout:           ${{ steps.p.outputs.req_timeout }}
-      max_connections:       ${{ steps.p.outputs.max_connections }}
       keep_alive:            ${{ steps.p.outputs.keep_alive }}
       ssl_version:           ${{ steps.p.outputs.ssl_version }}
       log_level:             ${{ steps.p.outputs.log_level }}
@@ -261,7 +256,6 @@ jobs:
           echo "iteration_count=${{ inputs.iteration_count || '0' }}"                   >> $GITHUB_OUTPUT
           echo "conn_timeout=${{ inputs.connection_timeout_sec || '30' }}"              >> $GITHUB_OUTPUT
           echo "req_timeout=${{ inputs.request_timeout_sec || '120' }}"                 >> $GITHUB_OUTPUT
-          echo "max_connections=${{ inputs.max_connections_per_host || '50' }}"         >> $GITHUB_OUTPUT
           echo "keep_alive=${{ inputs.keep_alive || 'enabled' }}"                       >> $GITHUB_OUTPUT
           echo "ssl_version=${{ inputs.ssl_version || 'auto' }}"                        >> $GITHUB_OUTPUT
           echo "log_level=${{ inputs.log_level || 'errors_only' }}"                     >> $GITHUB_OUTPUT
@@ -339,7 +333,6 @@ jobs:
       LR_ITERATIONS:     ${{ needs.preflight.outputs.iteration_count }}
       LR_CONN_TIMEOUT:   ${{ needs.preflight.outputs.conn_timeout }}
       LR_REQ_TIMEOUT:    ${{ needs.preflight.outputs.req_timeout }}
-      LR_MAX_CONNS:      ${{ needs.preflight.outputs.max_connections }}
       LR_KEEP_ALIVE:     ${{ needs.preflight.outputs.keep_alive }}
       LR_SSL_VERSION:    ${{ needs.preflight.outputs.ssl_version }}
       LR_LOG_LEVEL:      ${{ needs.preflight.outputs.log_level }}
@@ -377,7 +370,7 @@ jobs:
             -Iterations      $env:LR_ITERATIONS `
             -ConnTimeoutSec  $env:LR_CONN_TIMEOUT `
             -ReqTimeoutSec   $env:LR_REQ_TIMEOUT `
-            -MaxConnections  $env:LR_MAX_CONNS `
+            -MaxConnections  50 `
             -KeepAlive       ($env:LR_KEEP_ALIVE -eq 'enabled') `
             -SslVersion      $env:LR_SSL_VERSION `
             -LogLevel        $env:LR_LOG_LEVEL `
