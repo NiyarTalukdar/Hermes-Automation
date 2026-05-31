@@ -1,10 +1,21 @@
-name: "📊 Publish Dashboard to GitHub Pages"
+name: "🚀 LoadRunner API Performance Test"
 
 on:
   workflow_dispatch:
     inputs:
+
+      # ── Target ────────────────────────────────────────────────
+      environment:
+        description: "Target Environment"
+        required: true
+        type: choice
+        options: [dev, staging, production]
+        default: staging
+
+
+      # ── APM Monitoring Tool ───────────────────────────────────
       apm_tool:
-        description: "APM tool to fetch live metrics from"
+        description: "APM Monitoring Tool"
         required: true
         type: choice
         options:
@@ -17,100 +28,442 @@ on:
           - grafana
           - none
         default: none
-  push:
-    branches: [main]
-    paths: ["dashboard/**", "scripts/fetch_apm_metrics.py"]
-  workflow_run:
-    workflows:
-      - "🚀 LoadRunner API Performance Test"
-      - "🌐 LoadRunner Web HTTP/HTML Performance Test"
-    types: [completed]
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+      # ── Scenario Design ────────────────────────────────────────
+      test_scenario:
+        description: "Scenario Type"
+        required: true
+        type: choice
+        options: [smoke, load, stress, endurance, spike]
+        default: load
+
+      scheduler_mode:
+        description: "Scheduler Mode"
+        required: true
+        type: choice
+        options:
+          - real_world
+          - goal_oriented
+          - basic
+        default: real_world
+
+      vuser_count:
+        description: "Virtual User Count"
+        required: true
+        default: "50"
+
+      ramp_up_minutes:
+        description: "Ramp-Up Duration (min)"
+        required: true
+        default: "2"
+
+      steady_state_minutes:
+        description: "Steady State / Test Duration (min)"
+        required: true
+        default: "10"
+
+      ramp_down_minutes:
+        description: "Ramp-Down Duration (min)"
+        required: false
+        default: "2"
+
+      goal_metric:
+        description: "Goal Metric (goal_oriented only)"
+        required: false
+        type: choice
+        options: [hits_per_second, transactions_per_second, response_time]
+        default: transactions_per_second
+
+      goal_value:
+        description: "Goal Target Value"
+        required: false
+        default: "30"
+
+      goal_max_vusers:
+        description: "Max VUsers (goal_oriented only)"
+        required: false
+        default: "200"
+
+      # ── Runtime Settings ──────────────────────────────────────
+      think_time_mode:
+        description: "Think Time"
+        required: true
+        type: choice
+        options: [as_recorded, ignore, multiply, random_percentage, fixed_seconds]
+        default: ignore     # API tests typically ignore think time
+
+      think_time_value:
+        description: "Think Time Value (multiplier / fixed secs / random max%)"
+        required: false
+        default: "1.0"
+
+      think_time_min_pct:
+        description: "Think Time Random Min %"
+        required: false
+        default: "50"
+
+      think_time_max_pct:
+        description: "Think Time Random Max %"
+        required: false
+        default: "150"
+
+      pacing_mode:
+        description: "Iteration Pacing"
+        required: true
+        type: choice
+        options:
+          - immediately
+          - fixed_delay
+          - random_delay
+          - fixed_from_iteration_start
+          - random_from_iteration_start
+        default: immediately
+
+      pacing_min_seconds:
+        description: "Pacing Min Seconds"
+        required: false
+        default: "0"
+
+      pacing_max_seconds:
+        description: "Pacing Max Seconds (random modes only)"
+        required: false
+        default: "5"
+
+      iteration_count:
+        description: "Iterations per VUser (0 = run for full duration)"
+        required: false
+        default: "0"
+
+      # ── API-specific connection settings ──────────────────────
+      connection_timeout_sec:
+        description: "HTTP Connection Timeout (seconds)"
+        required: false
+        default: "30"
+
+      request_timeout_sec:
+        description: "HTTP Request Timeout (seconds)"
+        required: false
+        default: "120"
+
+      max_connections_per_host:
+        description: "Max Connections Per Host"
+        required: false
+        default: "50"
+
+      keep_alive:
+        description: "HTTP Keep-Alive"
+        required: false
+        type: choice
+        options: [enabled, disabled]
+        default: enabled
+
+      ssl_version:
+        description: "SSL/TLS Version"
+        required: false
+        type: choice
+        options: [auto, tls1_2, tls1_3]
+        default: auto
+
+      # ── Logging & Error Handling ──────────────────────────────
+      log_level:
+        description: "VUser Log Level"
+        required: false
+        type: choice
+        options: [none, errors_only, extended, full]
+        default: errors_only
+
+      on_error:
+        description: "On Error Action"
+        required: false
+        type: choice
+        options:
+          - continue_to_next_iteration
+          - continue_to_next_action
+          - stop_vuser
+          - stop_test
+        default: continue_to_next_iteration
+
+  schedule:
+    - cron: "0 2 * * 1-5"
+  push:
+    branches: [main, release/**]
+    paths: ["scripts/api/**", "configs/**"]
 
 concurrency:
-  group: pages
+  group: lr-api-${{ github.ref }}-${{ inputs.environment || 'staging' }}
   cancel-in-progress: false
 
+env:
+  LR_PROTOCOL: API
+  RESULTS_DIR: results/${{ github.run_id }}
+
 jobs:
-  deploy:
-    name: "📡 Fetch APM Metrics (${{ inputs.apm_tool || 'none' }}) + Deploy"
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+
+  preflight:
+    name: "✅ Pre-flight & Parameter Resolution"
     runs-on: ubuntu-latest
+    outputs:
+      environment:           ${{ steps.p.outputs.environment }}
+      scenario:              ${{ steps.p.outputs.scenario }}
+      scheduler_mode:        ${{ steps.p.outputs.scheduler_mode }}
+      vusers:                ${{ steps.p.outputs.vusers }}
+      ramp_up:               ${{ steps.p.outputs.ramp_up }}
+      steady_state:          ${{ steps.p.outputs.steady_state }}
+      ramp_down:             ${{ steps.p.outputs.ramp_down }}
+      total_duration:        ${{ steps.p.outputs.total_duration }}
+      goal_metric:           ${{ steps.p.outputs.goal_metric }}
+      goal_value:            ${{ steps.p.outputs.goal_value }}
+      goal_max_vusers:       ${{ steps.p.outputs.goal_max_vusers }}
+      think_time_mode:       ${{ steps.p.outputs.think_time_mode }}
+      think_time_value:      ${{ steps.p.outputs.think_time_value }}
+      think_time_min_pct:    ${{ steps.p.outputs.think_time_min_pct }}
+      think_time_max_pct:    ${{ steps.p.outputs.think_time_max_pct }}
+      pacing_mode:           ${{ steps.p.outputs.pacing_mode }}
+      pacing_min:            ${{ steps.p.outputs.pacing_min }}
+      pacing_max:            ${{ steps.p.outputs.pacing_max }}
+      iteration_count:       ${{ steps.p.outputs.iteration_count }}
+      conn_timeout:          ${{ steps.p.outputs.conn_timeout }}
+      req_timeout:           ${{ steps.p.outputs.req_timeout }}
+      max_connections:       ${{ steps.p.outputs.max_connections }}
+      keep_alive:            ${{ steps.p.outputs.keep_alive }}
+      ssl_version:           ${{ steps.p.outputs.ssl_version }}
+      log_level:             ${{ steps.p.outputs.log_level }}
+      on_error:              ${{ steps.p.outputs.on_error }}
+      apm_tool:              ${{ steps.p.outputs.apm_tool }}
+
+    steps:
+      - name: Resolve parameters
+        id: p
+        run: |
+          RAMP_UP="${{ inputs.ramp_up_minutes || '2' }}"
+          STEADY="${{ inputs.steady_state_minutes || '10' }}"
+          RAMP_DOWN="${{ inputs.ramp_down_minutes || '2' }}"
+          TOTAL=$(( ${RAMP_UP} + ${STEADY} + ${RAMP_DOWN} ))
+
+          echo "environment=${{ inputs.environment || 'staging' }}"                     >> $GITHUB_OUTPUT
+          echo "scenario=${{ inputs.test_scenario || 'load' }}"                         >> $GITHUB_OUTPUT
+          echo "scheduler_mode=${{ inputs.scheduler_mode || 'real_world' }}"            >> $GITHUB_OUTPUT
+          echo "vusers=${{ inputs.vuser_count || '50' }}"                               >> $GITHUB_OUTPUT
+          echo "ramp_up=${RAMP_UP}"                                                     >> $GITHUB_OUTPUT
+          echo "steady_state=${STEADY}"                                                 >> $GITHUB_OUTPUT
+          echo "ramp_down=${RAMP_DOWN}"                                                 >> $GITHUB_OUTPUT
+          echo "total_duration=${TOTAL}"                                                >> $GITHUB_OUTPUT
+          echo "goal_metric=${{ inputs.goal_metric || 'transactions_per_second' }}"     >> $GITHUB_OUTPUT
+          echo "goal_value=${{ inputs.goal_value || '30' }}"                            >> $GITHUB_OUTPUT
+          echo "goal_max_vusers=${{ inputs.goal_max_vusers || '200' }}"                 >> $GITHUB_OUTPUT
+          echo "think_time_mode=${{ inputs.think_time_mode || 'ignore' }}"              >> $GITHUB_OUTPUT
+          echo "think_time_value=${{ inputs.think_time_value || '1.0' }}"               >> $GITHUB_OUTPUT
+          echo "think_time_min_pct=${{ inputs.think_time_min_pct || '50' }}"            >> $GITHUB_OUTPUT
+          echo "think_time_max_pct=${{ inputs.think_time_max_pct || '150' }}"           >> $GITHUB_OUTPUT
+          echo "pacing_mode=${{ inputs.pacing_mode || 'immediately' }}"                 >> $GITHUB_OUTPUT
+          echo "pacing_min=${{ inputs.pacing_min_seconds || '0' }}"                     >> $GITHUB_OUTPUT
+          echo "pacing_max=${{ inputs.pacing_max_seconds || '5' }}"                     >> $GITHUB_OUTPUT
+          echo "iteration_count=${{ inputs.iteration_count || '0' }}"                   >> $GITHUB_OUTPUT
+          echo "conn_timeout=${{ inputs.connection_timeout_sec || '30' }}"              >> $GITHUB_OUTPUT
+          echo "req_timeout=${{ inputs.request_timeout_sec || '120' }}"                 >> $GITHUB_OUTPUT
+          echo "max_connections=${{ inputs.max_connections_per_host || '50' }}"         >> $GITHUB_OUTPUT
+          echo "keep_alive=${{ inputs.keep_alive || 'enabled' }}"                       >> $GITHUB_OUTPUT
+          echo "ssl_version=${{ inputs.ssl_version || 'auto' }}"                        >> $GITHUB_OUTPUT
+          echo "log_level=${{ inputs.log_level || 'errors_only' }}"                     >> $GITHUB_OUTPUT
+          echo "apm_tool=${{ inputs.apm_tool || 'none' }}"                        >> $GITHUB_OUTPUT
+          echo "on_error=${{ inputs.on_error || 'continue_to_next_iteration' }}"        >> $GITHUB_OUTPUT
+
+      - name: Write job summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 🚀 API Load Test — Run Configuration
+          | Setting | Value |
+          |---------|-------|
+          | Environment | `${{ inputs.environment }}` |
+          | Scenario | `${{ inputs.test_scenario }}` |
+          | Scheduler | `${{ inputs.scheduler_mode }}` |
+          | VUsers | `${{ inputs.vuser_count }}` |
+          | Ramp Up | `${{ inputs.ramp_up_minutes }}m` |
+          | Steady State | `${{ inputs.steady_state_minutes }}m` |
+          | Ramp Down | `${{ inputs.ramp_down_minutes }}m` |
+          | Think Time | `${{ inputs.think_time_mode }}` |
+          | Pacing | `${{ inputs.pacing_mode }}` |
+          | Connection Timeout | `${{ inputs.connection_timeout_sec }}s` |
+          | Keep-Alive | `${{ inputs.keep_alive }}` |
+          | SSL | `${{ inputs.ssl_version }}` |
+          | On Error | `${{ inputs.on_error }}` |
+          EOF
+
+  observability-start:
+    continue-on-error: true
+    name: "📡 Mark Test Start (${{ needs.preflight.outputs.apm_tool }})"
+    needs: preflight
+    if: needs.preflight.outputs.apm_tool != 'none'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Annotate test start
+        env:
+          APM_TOOL:                    ${{ needs.preflight.outputs.apm_tool }}
+          DD_API_KEY:                  ${{ secrets.DD_API_KEY }}
+          DD_SITE:                     ${{ secrets.DD_SITE }}
+          DT_ENVIRONMENT_ID:           ${{ secrets.DT_ENVIRONMENT_ID }}
+          DT_API_TOKEN:                ${{ secrets.DT_API_TOKEN }}
+          APPDYNAMICS_CONTROLLER_URL:  ${{ secrets.APPDYNAMICS_CONTROLLER_URL }}
+          APPDYNAMICS_ACCOUNT_NAME:    ${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}
+          APPDYNAMICS_API_KEY:         ${{ secrets.APPDYNAMICS_API_KEY }}
+          APPDYNAMICS_APP_ID:          ${{ secrets.APPDYNAMICS_APP_ID }}
+          NEWRELIC_API_KEY:            ${{ secrets.NEWRELIC_API_KEY }}
+          NEWRELIC_ACCOUNT_ID:         ${{ secrets.NEWRELIC_ACCOUNT_ID }}
+          SPLUNK_ACCESS_TOKEN:         ${{ secrets.SPLUNK_ACCESS_TOKEN }}
+          SPLUNK_REALM:                ${{ secrets.SPLUNK_REALM }}
+          ELASTIC_ES_URL:              ${{ secrets.ELASTIC_ES_URL }}
+          ELASTIC_API_KEY:             ${{ secrets.ELASTIC_API_KEY }}
+          GRAFANA_API_KEY:             ${{ secrets.GRAFANA_API_KEY }}
+        run: echo "API test starting — $APM_TOOL will receive metrics at completion"
+
+  run-lr-api-test:
+    name: "⚡ Execute API Load Test"
+    needs: [preflight, observability-start]
+    if: always() && needs.preflight.result == 'success'
+    runs-on: [self-hosted, loadrunner, windows]
     env:
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
-      APM_TOOL: ${{ inputs.apm_tool || 'none' }}
-      # Datadog
-      DD_API_KEY:                  ${{ secrets.DD_API_KEY }}
-      DD_APP_KEY:                  ${{ secrets.DD_APP_KEY }}
-      DD_SITE:                     ${{ secrets.DD_SITE }}
-      # Dynatrace
-      DT_ENVIRONMENT_ID:           ${{ secrets.DT_ENVIRONMENT_ID }}
-      DT_API_TOKEN:                ${{ secrets.DT_API_TOKEN }}
-      # AppDynamics
-      APPDYNAMICS_CONTROLLER_URL:  ${{ secrets.APPDYNAMICS_CONTROLLER_URL }}
-      APPDYNAMICS_ACCOUNT_NAME:    ${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}
-      APPDYNAMICS_API_KEY:         ${{ secrets.APPDYNAMICS_API_KEY }}
-      APPDYNAMICS_APP_ID:          ${{ secrets.APPDYNAMICS_APP_ID }}
-      # New Relic
-      NEWRELIC_API_KEY:            ${{ secrets.NEWRELIC_API_KEY }}
-      NEWRELIC_ACCOUNT_ID:         ${{ secrets.NEWRELIC_ACCOUNT_ID }}
-      NEWRELIC_REGION:             ${{ secrets.NEWRELIC_REGION }}
-      # Splunk
-      SPLUNK_ACCESS_TOKEN:         ${{ secrets.SPLUNK_ACCESS_TOKEN }}
-      SPLUNK_REALM:                ${{ secrets.SPLUNK_REALM }}
-      # Elastic
-      ELASTIC_ES_URL:              ${{ secrets.ELASTIC_ES_URL }}
-      ELASTIC_API_KEY:             ${{ secrets.ELASTIC_API_KEY }}
-      ELASTIC_APM_SERVER_URL:      ${{ secrets.ELASTIC_APM_SERVER_URL }}
-      ELASTIC_APM_SECRET_TOKEN:    ${{ secrets.ELASTIC_APM_SECRET_TOKEN }}
-      ELASTIC_ES_INDEX:            ${{ secrets.ELASTIC_ES_INDEX }}
-      # Grafana Cloud
-      GRAFANA_PROMETHEUS_URL:      ${{ secrets.GRAFANA_PROMETHEUS_URL }}
-      GRAFANA_PROMETHEUS_USER:     ${{ secrets.GRAFANA_PROMETHEUS_USER }}
-      GRAFANA_API_KEY:             ${{ secrets.GRAFANA_API_KEY }}
+      LR_ENV:            ${{ needs.preflight.outputs.environment }}
+      LR_SCENARIO:       ${{ needs.preflight.outputs.scenario }}
+      LR_SCHEDULER_MODE: ${{ needs.preflight.outputs.scheduler_mode }}
+      LR_VUSERS:         ${{ needs.preflight.outputs.vusers }}
+      LR_RAMP_UP:        ${{ needs.preflight.outputs.ramp_up }}
+      LR_STEADY:         ${{ needs.preflight.outputs.steady_state }}
+      LR_RAMP_DOWN:      ${{ needs.preflight.outputs.ramp_down }}
+      LR_TOTAL_DURATION: ${{ needs.preflight.outputs.total_duration }}
+      LR_THINK_TIME:     ${{ needs.preflight.outputs.think_time_mode }}
+      LR_THINK_VALUE:    ${{ needs.preflight.outputs.think_time_value }}
+      LR_PACING_MODE:    ${{ needs.preflight.outputs.pacing_mode }}
+      LR_PACING_MIN:     ${{ needs.preflight.outputs.pacing_min }}
+      LR_PACING_MAX:     ${{ needs.preflight.outputs.pacing_max }}
+      LR_ITERATIONS:     ${{ needs.preflight.outputs.iteration_count }}
+      LR_CONN_TIMEOUT:   ${{ needs.preflight.outputs.conn_timeout }}
+      LR_REQ_TIMEOUT:    ${{ needs.preflight.outputs.req_timeout }}
+      LR_MAX_CONNS:      ${{ needs.preflight.outputs.max_connections }}
+      LR_KEEP_ALIVE:     ${{ needs.preflight.outputs.keep_alive }}
+      LR_SSL_VERSION:    ${{ needs.preflight.outputs.ssl_version }}
+      LR_LOG_LEVEL:      ${{ needs.preflight.outputs.log_level }}
+      LR_ON_ERROR:       ${{ needs.preflight.outputs.on_error }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Fetch live APM metrics → ${{ env.APM_TOOL }}
+      - name: Authenticate with LR Controller
+        shell: pwsh
         run: |
-          python3 scripts/fetch_apm_metrics.py \
-            --tool   "$APM_TOOL" \
-            --output "dashboard/apm-metrics.json"
+          $securePass = ConvertTo-SecureString "${{ secrets.LR_SCRIPT_PASSWORD }}" -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential("${{ secrets.LR_SCRIPT_USERNAME }}", $securePass)
+          $session = New-PSSession -ComputerName "${{ secrets.LR_CONTROLLER_HOST }}" -Credential $cred -ErrorAction Stop
+          Write-Host "✅ Authenticated as ${{ secrets.LR_SCRIPT_USERNAME }}"
+
+      - name: Configure API scenario + runtime settings
+        shell: pwsh
+        run: |
+          & ".\scripts\configure-api-scenario.ps1" `
+            -ScenarioFile    "scripts\api\$env:LR_SCENARIO.lrs" `
+            -SchedulerMode   $env:LR_SCHEDULER_MODE `
+            -VUsers          $env:LR_VUSERS `
+            -RampUpMin       $env:LR_RAMP_UP `
+            -SteadyMin       $env:LR_STEADY `
+            -RampDownMin     $env:LR_RAMP_DOWN `
+            -GoalMetric      "${{ needs.preflight.outputs.goal_metric }}" `
+            -GoalValue       "${{ needs.preflight.outputs.goal_value }}" `
+            -GoalMaxVUsers   "${{ needs.preflight.outputs.goal_max_vusers }}" `
+            -ThinkTimeMode   $env:LR_THINK_TIME `
+            -ThinkTimeValue  $env:LR_THINK_VALUE `
+            -PacingMode      $env:LR_PACING_MODE `
+            -PacingMinSec    $env:LR_PACING_MIN `
+            -PacingMaxSec    $env:LR_PACING_MAX `
+            -Iterations      $env:LR_ITERATIONS `
+            -ConnTimeoutSec  $env:LR_CONN_TIMEOUT `
+            -ReqTimeoutSec   $env:LR_REQ_TIMEOUT `
+            -MaxConnections  $env:LR_MAX_CONNS `
+            -KeepAlive       ($env:LR_KEEP_ALIVE -eq 'enabled') `
+            -SslVersion      $env:LR_SSL_VERSION `
+            -LogLevel        $env:LR_LOG_LEVEL `
+            -OnError         $env:LR_ON_ERROR `
+            -TargetEnv       $env:LR_ENV `
+            -LicenseServer   "${{ secrets.LR_LICENSE_SERVER }}"
+
+      - name: Run scenario
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "$env:RESULTS_DIR" -Force | Out-Null
+          & ".\scripts\run-lr-scenario.ps1" `
+            -ScenarioFile   "scripts\api\$env:LR_SCENARIO`_patched.lrs" `
+            -ResultsPath    "$env:RESULTS_DIR" `
+            -TimeoutMinutes (($env:LR_TOTAL_DURATION -as [int]) + 15)
+
+      - name: Validate SLA
+        shell: pwsh
+        run: |
+          & ".\scripts\validate-sla.ps1" `
+            -ResultsPath "$env:RESULTS_DIR" `
+            -SlaConfig   "configs\sla-$env:LR_SCENARIO.json" `
+            -Protocol    "API"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lr-api-results-${{ github.run_id }}
+          path: ${{ env.RESULTS_DIR }}/**
+          retention-days: 30
+
+  observability-end:
+    continue-on-error: true
+    name: "📊 Publish Metrics → ${{ needs.preflight.outputs.apm_tool }}"
+    needs: [preflight, run-lr-api-test]
+    runs-on: ubuntu-latest
+    if: always()
+    env:
+      APM_TOOL:                    ${{ needs.preflight.outputs.apm_tool }}
+      DD_API_KEY:                  ${{ secrets.DD_API_KEY }}
+      DD_APP_KEY:                  ${{ secrets.DD_APP_KEY }}
+      DD_SITE:                     ${{ secrets.DD_SITE }}
+      DT_ENVIRONMENT_ID:           ${{ secrets.DT_ENVIRONMENT_ID }}
+      DT_API_TOKEN:                ${{ secrets.DT_API_TOKEN }}
+      APPDYNAMICS_CONTROLLER_URL:  ${{ secrets.APPDYNAMICS_CONTROLLER_URL }}
+      APPDYNAMICS_ACCOUNT_NAME:    ${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}
+      APPDYNAMICS_API_KEY:         ${{ secrets.APPDYNAMICS_API_KEY }}
+      APPDYNAMICS_APP_ID:          ${{ secrets.APPDYNAMICS_APP_ID }}
+      NEWRELIC_API_KEY:            ${{ secrets.NEWRELIC_API_KEY }}
+      NEWRELIC_ACCOUNT_ID:         ${{ secrets.NEWRELIC_ACCOUNT_ID }}
+      NEWRELIC_REGION:             ${{ secrets.NEWRELIC_REGION }}
+      SPLUNK_ACCESS_TOKEN:         ${{ secrets.SPLUNK_ACCESS_TOKEN }}
+      SPLUNK_REALM:                ${{ secrets.SPLUNK_REALM }}
+      ELASTIC_ES_URL:              ${{ secrets.ELASTIC_ES_URL }}
+      ELASTIC_APM_SERVER_URL:      ${{ secrets.ELASTIC_APM_SERVER_URL }}
+      ELASTIC_APM_SECRET_TOKEN:    ${{ secrets.ELASTIC_APM_SECRET_TOKEN }}
+      ELASTIC_API_KEY:             ${{ secrets.ELASTIC_API_KEY }}
+      ELASTIC_ES_INDEX:            ${{ secrets.ELASTIC_ES_INDEX }}
+      GRAFANA_PROMETHEUS_URL:      ${{ secrets.GRAFANA_PROMETHEUS_URL }}
+      GRAFANA_PROMETHEUS_USER:     ${{ secrets.GRAFANA_PROMETHEUS_USER }}
+      GRAFANA_API_KEY:             ${{ secrets.GRAFANA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: lr-api-results-${{ github.run_id }}
+          path: results/
         continue-on-error: true
 
-      - name: Print APM snapshot
+      - name: Push metrics → ${{ needs.preflight.outputs.apm_tool }}
         run: |
-          echo "## 📡 APM Snapshot — $APM_TOOL" >> $GITHUB_STEP_SUMMARY
-          if [ -f dashboard/apm-metrics.json ]; then
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            python3 -c "import json,sys; d=json.load(open('dashboard/apm-metrics.json')); print(json.dumps(d, indent=2)[:1500])" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+          python3 scripts/push_metrics.py \
+            --tool        "$APM_TOOL" \
+            --results-dir results/ \
+            --run-id      "${{ github.run_id }}" \
+            --protocol    api \
+            --scenario    "${{ needs.preflight.outputs.scenario }}" \
+            --environment "${{ needs.preflight.outputs.environment }}"
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload dashboard artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dashboard/
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Print URL
-        run: echo "✅ Dashboard live at ${{ steps.deployment.outputs.page_url }}"
+      - name: Update dashboard
+        run: |
+          python3 scripts/update_dashboard.py \
+            --results-dir results/ --run-id "${{ github.run_id }}" \
+            --protocol api --scenario "${{ needs.preflight.outputs.scenario }}" \
+            --environment "${{ needs.preflight.outputs.environment }}" \
+            --status "${{ needs.run-lr-api-test.result }}" \
+            --apm-tool "$APM_TOOL"
