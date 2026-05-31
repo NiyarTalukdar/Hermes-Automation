@@ -103,15 +103,10 @@ on:
         required: false
         default: "1.0"
 
-      think_time_min_pct:
-        description: "Think Time Random Min % (random_percentage only)"
+      think_time_range:
+        description: "Think Time Random Range (MIN-MAX %) — random_percentage mode only. e.g. 50-150"
         required: false
-        default: "50"
-
-      think_time_max_pct:
-        description: "Think Time Random Max % (random_percentage only)"
-        required: false
-        default: "150"
+        default: "50-150"
 
       pacing_mode:
         description: "Iteration Pacing"
@@ -221,8 +216,7 @@ jobs:
       goal_max_vusers:    ${{ steps.p.outputs.goal_max_vusers }}
       think_time_mode:    ${{ steps.p.outputs.think_time_mode }}
       think_time_value:   ${{ steps.p.outputs.think_time_value }}
-      think_time_min_pct: ${{ steps.p.outputs.think_time_min_pct }}
-      think_time_max_pct: ${{ steps.p.outputs.think_time_max_pct }}
+      think_time_range:   ${{ steps.p.outputs.think_time_range }}
       pacing_mode:        ${{ steps.p.outputs.pacing_mode }}
       pacing_min:         ${{ steps.p.outputs.pacing_min }}
       pacing_max:         ${{ steps.p.outputs.pacing_max }}
@@ -257,8 +251,7 @@ jobs:
           echo "goal_max_vusers=${{ inputs.goal_max_vusers || '300' }}"                  >> $GITHUB_OUTPUT
           echo "think_time_mode=${{ inputs.think_time_mode || 'as_recorded' }}"          >> $GITHUB_OUTPUT
           echo "think_time_value=${{ inputs.think_time_value || '1.0' }}"                >> $GITHUB_OUTPUT
-          echo "think_time_min_pct=${{ inputs.think_time_min_pct || '50' }}"             >> $GITHUB_OUTPUT
-          echo "think_time_max_pct=${{ inputs.think_time_max_pct || '150' }}"            >> $GITHUB_OUTPUT
+          echo "think_time_range=${{ inputs.think_time_range || '50-150' }}"             >> $GITHUB_OUTPUT
           echo "pacing_mode=${{ inputs.pacing_mode || 'immediately' }}"                  >> $GITHUB_OUTPUT
           echo "pacing_min=${{ inputs.pacing_min_seconds || '0' }}"                      >> $GITHUB_OUTPUT
           echo "pacing_max=${{ inputs.pacing_max_seconds || '10' }}"                     >> $GITHUB_OUTPUT
@@ -343,8 +336,7 @@ jobs:
       LR_GOAL_MAX_VUSERS:  ${{ needs.preflight.outputs.goal_max_vusers }}
       LR_THINK_TIME_MODE:  ${{ needs.preflight.outputs.think_time_mode }}
       LR_THINK_TIME_VALUE: ${{ needs.preflight.outputs.think_time_value }}
-      LR_THINK_TIME_MIN:   ${{ needs.preflight.outputs.think_time_min_pct }}
-      LR_THINK_TIME_MAX:   ${{ needs.preflight.outputs.think_time_max_pct }}
+      LR_THINK_TIME_RANGE: ${{ needs.preflight.outputs.think_time_range }}
       LR_PACING_MODE:      ${{ needs.preflight.outputs.pacing_mode }}
       LR_PACING_MIN:       ${{ needs.preflight.outputs.pacing_min }}
       LR_PACING_MAX:       ${{ needs.preflight.outputs.pacing_max }}
@@ -382,8 +374,8 @@ jobs:
             -GoalMaxVUsers   $env:LR_GOAL_MAX_VUSERS `
             -ThinkTimeMode   $env:LR_THINK_TIME_MODE `
             -ThinkTimeValue  $env:LR_THINK_TIME_VALUE `
-            -ThinkTimeMinPct $env:LR_THINK_TIME_MIN `
-            -ThinkTimeMaxPct $env:LR_THINK_TIME_MAX `
+            -ThinkTimeMinPct ($env:LR_THINK_TIME_RANGE -split '-')[0] `
+            -ThinkTimeMaxPct ($env:LR_THINK_TIME_RANGE -split '-')[1] `
             -PacingMode      $env:LR_PACING_MODE `
             -PacingMinSec    $env:LR_PACING_MIN `
             -PacingMaxSec    $env:LR_PACING_MAX `
