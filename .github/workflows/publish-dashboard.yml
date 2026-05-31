@@ -1,0 +1,116 @@
+name: "📊 Publish Dashboard to GitHub Pages"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apm_tool:
+        description: "APM tool to fetch live metrics from"
+        required: true
+        type: choice
+        options:
+          - datadog
+          - dynatrace
+          - appdynamics
+          - newrelic
+          - splunk
+          - elastic
+          - grafana
+          - none
+        default: none
+  push:
+    branches: [main]
+    paths: ["dashboard/**", "scripts/fetch_apm_metrics.py"]
+  workflow_run:
+    workflows:
+      - "🚀 LoadRunner API Performance Test"
+      - "🌐 LoadRunner Web HTTP/HTML Performance Test"
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "📡 Fetch APM Metrics (${{ inputs.apm_tool || 'none' }}) + Deploy"
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+      APM_TOOL: ${{ inputs.apm_tool || 'none' }}
+      # Datadog
+      DD_API_KEY:                  ${{ secrets.DD_API_KEY }}
+      DD_APP_KEY:                  ${{ secrets.DD_APP_KEY }}
+      DD_SITE:                     ${{ secrets.DD_SITE }}
+      # Dynatrace
+      DT_ENVIRONMENT_ID:           ${{ secrets.DT_ENVIRONMENT_ID }}
+      DT_API_TOKEN:                ${{ secrets.DT_API_TOKEN }}
+      # AppDynamics
+      APPDYNAMICS_CONTROLLER_URL:  ${{ secrets.APPDYNAMICS_CONTROLLER_URL }}
+      APPDYNAMICS_ACCOUNT_NAME:    ${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}
+      APPDYNAMICS_API_KEY:         ${{ secrets.APPDYNAMICS_API_KEY }}
+      APPDYNAMICS_APP_ID:          ${{ secrets.APPDYNAMICS_APP_ID }}
+      # New Relic
+      NEWRELIC_API_KEY:            ${{ secrets.NEWRELIC_API_KEY }}
+      NEWRELIC_ACCOUNT_ID:         ${{ secrets.NEWRELIC_ACCOUNT_ID }}
+      NEWRELIC_REGION:             ${{ secrets.NEWRELIC_REGION }}
+      # Splunk
+      SPLUNK_ACCESS_TOKEN:         ${{ secrets.SPLUNK_ACCESS_TOKEN }}
+      SPLUNK_REALM:                ${{ secrets.SPLUNK_REALM }}
+      # Elastic
+      ELASTIC_ES_URL:              ${{ secrets.ELASTIC_ES_URL }}
+      ELASTIC_API_KEY:             ${{ secrets.ELASTIC_API_KEY }}
+      ELASTIC_APM_SERVER_URL:      ${{ secrets.ELASTIC_APM_SERVER_URL }}
+      ELASTIC_APM_SECRET_TOKEN:    ${{ secrets.ELASTIC_APM_SECRET_TOKEN }}
+      ELASTIC_ES_INDEX:            ${{ secrets.ELASTIC_ES_INDEX }}
+      # Grafana Cloud
+      GRAFANA_PROMETHEUS_URL:      ${{ secrets.GRAFANA_PROMETHEUS_URL }}
+      GRAFANA_PROMETHEUS_USER:     ${{ secrets.GRAFANA_PROMETHEUS_USER }}
+      GRAFANA_API_KEY:             ${{ secrets.GRAFANA_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch live APM metrics → ${{ env.APM_TOOL }}
+        run: |
+          python3 scripts/fetch_apm_metrics.py \
+            --tool   "$APM_TOOL" \
+            --output "dashboard/apm-metrics.json"
+        continue-on-error: true
+
+      - name: Print APM snapshot
+        run: |
+          echo "## 📡 APM Snapshot — $APM_TOOL" >> $GITHUB_STEP_SUMMARY
+          if [ -f dashboard/apm-metrics.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            python3 -c "import json,sys; d=json.load(open('dashboard/apm-metrics.json')); print(json.dumps(d, indent=2)[:1500])" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload dashboard artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Print URL
+        run: echo "✅ Dashboard live at ${{ steps.deployment.outputs.page_url }}"
