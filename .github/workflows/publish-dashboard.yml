@@ -1,0 +1,154 @@
+name: "📊 Publish Dashboard to GitHub Pages"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apm_tool_override:
+        description: "APM tool override (leave blank to use configs/project.json)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - datadog
+          - dynatrace
+          - appdynamics
+          - newrelic
+          - splunk
+          - elastic
+          - grafana
+          - none
+        default: ""
+  push:
+    branches: [main]
+    paths:
+      - "dashboard/**"
+      - "configs/project.json"
+      - "scripts/fetch_apm_metrics.py"
+  workflow_run:
+    workflows:
+      - "🚀 LoadRunner API Performance Test"
+      - "🌐 LoadRunner Web HTTP/HTML Performance Test"
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "📡 Fetch APM Metrics + Deploy Dashboard"
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+      # All APM secrets injected — only the selected tool's vars will be non-empty
+      DD_API_KEY:                  ${{ secrets.DD_API_KEY }}
+      DD_APP_KEY:                  ${{ secrets.DD_APP_KEY }}
+      DD_SITE:                     ${{ secrets.DD_SITE }}
+      DT_ENVIRONMENT_ID:           ${{ secrets.DT_ENVIRONMENT_ID }}
+      DT_API_TOKEN:                ${{ secrets.DT_API_TOKEN }}
+      APPDYNAMICS_CONTROLLER_URL:  ${{ secrets.APPDYNAMICS_CONTROLLER_URL }}
+      APPDYNAMICS_ACCOUNT_NAME:    ${{ secrets.APPDYNAMICS_ACCOUNT_NAME }}
+      APPDYNAMICS_API_KEY:         ${{ secrets.APPDYNAMICS_API_KEY }}
+      APPDYNAMICS_APP_ID:          ${{ secrets.APPDYNAMICS_APP_ID }}
+      NEWRELIC_API_KEY:            ${{ secrets.NEWRELIC_API_KEY }}
+      NEWRELIC_ACCOUNT_ID:         ${{ secrets.NEWRELIC_ACCOUNT_ID }}
+      NEWRELIC_REGION:             ${{ secrets.NEWRELIC_REGION }}
+      SPLUNK_ACCESS_TOKEN:         ${{ secrets.SPLUNK_ACCESS_TOKEN }}
+      SPLUNK_REALM:                ${{ secrets.SPLUNK_REALM }}
+      ELASTIC_ES_URL:              ${{ secrets.ELASTIC_ES_URL }}
+      ELASTIC_API_KEY:             ${{ secrets.ELASTIC_API_KEY }}
+      ELASTIC_APM_SERVER_URL:      ${{ secrets.ELASTIC_APM_SERVER_URL }}
+      ELASTIC_APM_SECRET_TOKEN:    ${{ secrets.ELASTIC_APM_SECRET_TOKEN }}
+      ELASTIC_ES_INDEX:            ${{ secrets.ELASTIC_ES_INDEX }}
+      GRAFANA_PROMETHEUS_URL:      ${{ secrets.GRAFANA_PROMETHEUS_URL }}
+      GRAFANA_PROMETHEUS_USER:     ${{ secrets.GRAFANA_PROMETHEUS_USER }}
+      GRAFANA_API_KEY:             ${{ secrets.GRAFANA_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Resolve APM tool (project.json → override → none)
+        id: resolve-tool
+        run: |
+          # Read from configs/project.json
+          PROJECT_TOOL=$(python3 -c "
+          import json, sys
+          try:
+              d = json.load(open('configs/project.json'))
+              print(d.get('apm', {}).get('tool', 'none'))
+          except:
+              print('none')
+          ")
+
+          # Override takes precedence if provided
+          OVERRIDE="${{ inputs.apm_tool_override }}"
+          if [ -n "$OVERRIDE" ]; then
+              FINAL_TOOL="$OVERRIDE"
+              echo "ℹ️  Using manual override: $FINAL_TOOL"
+          else
+              FINAL_TOOL="$PROJECT_TOOL"
+              echo "ℹ️  Using project.json setting: $FINAL_TOOL"
+          fi
+
+          echo "apm_tool=$FINAL_TOOL" >> $GITHUB_OUTPUT
+          echo "**APM Tool:** \`$FINAL_TOOL\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fetch live APM metrics → ${{ steps.resolve-tool.outputs.apm_tool }}
+        run: |
+          python3 scripts/fetch_apm_metrics.py \
+            --tool   "${{ steps.resolve-tool.outputs.apm_tool }}" \
+            --output "dashboard/apm-metrics.json"
+        continue-on-error: true
+
+      - name: Show APM snapshot in Step Summary
+        run: |
+          echo "## 📡 APM Snapshot — ${{ steps.resolve-tool.outputs.apm_tool }}" >> $GITHUB_STEP_SUMMARY
+          if [ -f dashboard/apm-metrics.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            python3 -c "
+          import json
+          d = json.load(open('dashboard/apm-metrics.json'))
+          # Print without raw metric values to keep summary readable
+          summary = {k: v for k, v in d.items() if k != 'metrics'}
+          m = d.get('metrics', {})
+          if m and not m.get('error'):
+              summary['metrics_preview'] = {
+                  k: v for k, v in m.items()
+                  if not isinstance(v, list) and k not in ['raw','fetched_at','dashboard_url']
+              }
+          print(json.dumps(summary, indent=2))
+            " >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload dashboard artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Print dashboard URL
+        run: |
+          echo "✅ Dashboard: ${{ steps.deployment.outputs.page_url }}"
+          echo "🔧 APM tool:  ${{ steps.resolve-tool.outputs.apm_tool }}"
+          echo "🔓 Public access — no login required"
