@@ -1,0 +1,47 @@
+{
+  "_comment": "PerfMation project configuration. Edit this file to set your integrated APM tool. The dashboard and workflows read this automatically.",
+
+  "project": {
+    "name": "PerfMation",
+    "repo": "NiyarTalukdar/PerfMation",
+    "team": "Performance Engineering"
+  },
+
+  "apm": {
+    "tool": "none",
+    "_tool_options": [
+      "datadog",
+      "dynatrace",
+      "appdynamics",
+      "newrelic",
+      "splunk",
+      "elastic",
+      "grafana",
+      "none"
+    ],
+    "_comment": "Set 'tool' to whichever APM is integrated with your project. This value is read by the publish-dashboard workflow and pre-selects the tool automatically — you don't need to pick it manually each time you run a workflow."
+  },
+
+  "sla": {
+    "default_breach_action": "log_only",
+    "_breach_action_options": {
+      "log_only":     "Log violations to console and Step Summary. Job always passes. Test always runs to completion.",
+      "warn_and_log": "Log violations as GitHub warning annotations. Job always passes. Test always runs to completion.",
+      "fail_job":     "Log violations and fail the GitHub Actions job after test completes. Test still runs to completion."
+    },
+    "_note": "The test itself is NEVER stopped mid-run by SLA validation. SLA checks run POST-TEST on results. To stop the LR test mid-run on breach, configure Controller SLA actions inside the .lrs scenario file."
+  },
+
+  "defaults": {
+    "environment":        "staging",
+    "scheduler_mode":     "real_world",
+    "vuser_count":        50,
+    "ramp_up_minutes":    2,
+    "steady_state_minutes": 10,
+    "ramp_down_minutes":  2,
+    "think_time_mode":    "as_recorded",
+    "pacing_mode":        "immediately",
+    "log_level":          "errors_only",
+    "on_error":           "continue_to_next_iteration"
+  }
+}
