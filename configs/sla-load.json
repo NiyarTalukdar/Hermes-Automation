@@ -1,0 +1,37 @@
+{
+  "_comment": "SLA thresholds for load scenario. breach_action is overridden by workflow input.",
+  "scenario": "load",
+  "protocol": "ALL",
+  "default_breach_action": "log_only",
+
+  "thresholds": {
+    "avg_response_time_ms":  { "warn": 1500,  "fail": 2000  },
+    "p90_response_time_ms":  { "warn": 2500,  "fail": 3500  },
+    "p95_response_time_ms":  { "warn": 3000,  "fail": 4500  },
+    "p99_response_time_ms":  { "warn": 5000,  "fail": 8000  },
+    "max_response_time_ms":  { "warn": 8000,  "fail": 15000 },
+    "error_rate_percent":    { "warn": 0.5,   "fail": 1.0   },
+    "throughput_tps":        { "warn_below": 20, "fail_below": 10 }
+  },
+
+  "transactions": [
+    {
+      "name": "Login",
+      "avg_response_time_ms": { "warn": 800,  "fail": 1200 },
+      "p95_response_time_ms": { "warn": 1500, "fail": 2000 },
+      "error_rate_percent":   { "warn": 0.1,  "fail": 0.5  }
+    },
+    {
+      "name": "Search",
+      "avg_response_time_ms": { "warn": 500,  "fail": 1000 },
+      "p95_response_time_ms": { "warn": 1000, "fail": 2000 },
+      "error_rate_percent":   { "warn": 0.5,  "fail": 1.0  }
+    },
+    {
+      "name": "Checkout",
+      "avg_response_time_ms": { "warn": 1000, "fail": 2000 },
+      "p95_response_time_ms": { "warn": 2000, "fail": 3500 },
+      "error_rate_percent":   { "warn": 0.1,  "fail": 0.5  }
+    }
+  ]
+}
