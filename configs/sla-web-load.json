@@ -1,0 +1,29 @@
+{
+  "_comment": "SLA thresholds for Web HTTP load scenario",
+  "scenario": "load",
+  "protocol": "WEB",
+  "default_breach_action": "log_only",
+  "thresholds": {
+    "avg_response_time_ms":  { "warn": 2000,  "fail": 3000  },
+    "p90_response_time_ms":  { "warn": 3500,  "fail": 5000  },
+    "p95_response_time_ms":  { "warn": 4500,  "fail": 7000  },
+    "p99_response_time_ms":  { "warn": 7000,  "fail": 12000 },
+    "max_response_time_ms":  { "warn": 12000, "fail": 20000 },
+    "error_rate_percent":    { "warn": 0.5,   "fail": 1.0   },
+    "throughput_tps":        { "warn_below": 15, "fail_below": 8 }
+  },
+  "transactions": [
+    {
+      "name": "PageLoad_Home",
+      "avg_response_time_ms": { "warn": 1500, "fail": 2500 },
+      "p95_response_time_ms": { "warn": 3000, "fail": 5000 },
+      "error_rate_percent":   { "warn": 0.1,  "fail": 0.5  }
+    },
+    {
+      "name": "PageLoad_Search",
+      "avg_response_time_ms": { "warn": 2000, "fail": 3500 },
+      "p95_response_time_ms": { "warn": 4000, "fail": 6000 },
+      "error_rate_percent":   { "warn": 0.5,  "fail": 1.0  }
+    }
+  ]
+}
