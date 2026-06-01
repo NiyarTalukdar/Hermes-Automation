@@ -1,4 +1,4 @@
-# PerfMation: LoadRunner CI/CD Pipeline — GitHub Actions
+# Hermes Automation: LoadRunner CI/CD Pipeline — GitHub Actions
 
 > Enterprise-grade performance testing pipeline for **Micro Focus LoadRunner** (API & Web HTTP protocols), with open-source observability dashboard and Dynatrace/AppDynamics integration.
 
