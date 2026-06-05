@@ -226,16 +226,6 @@ jobs:
       req_timeout:           ${{ steps.p.outputs.req_timeout }}
       keep_alive:            ${{ steps.p.outputs.keep_alive }}
       ssl_version:           ${{ steps.p.outputs.ssl_version }}
-      sla_breach_action:
-        description: "SLA Breach Action"
-        required: true
-        type: choice
-        options:
-          - log_only        # Log violations, test continues to completion (default)
-          - warn_and_log    # Log as warning, mark job yellow, test continues
-          - fail_job        # Fail the GitHub Actions job on breach (test already complete)
-        default: log_only
-
       log_level:             ${{ steps.p.outputs.log_level }}
       sla_breach_action:     ${{ steps.p.outputs.sla_breach_action }}
       on_error:              ${{ steps.p.outputs.on_error }}
@@ -409,7 +399,7 @@ jobs:
             -ResultsPath "$env:RESULTS_DIR" `
             -SlaConfig   "configs\sla-$env:LR_SCENARIO.json" `
             -Protocol    "API" `
-            -BreachAction "${ needs.preflight.outputs.sla_breach_action }"
+            -BreachAction "${{ needs.preflight.outputs.sla_breach_action }}"
 
       - name: Upload results
         uses: actions/upload-artifact@v4
