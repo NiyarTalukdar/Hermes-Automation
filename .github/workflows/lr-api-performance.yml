@@ -71,8 +71,8 @@ on:
         description: "Goal Metric (goal_oriented only)"
         required: false
         type: choice
-        options: [hits_per_second, transactions_per_second, response_time]
-        default: transactions_per_second
+        options: [transactions_per_hour, hits_per_second, pages_per_hour, response_time]
+        default: transactions_per_hour
 
       goal_value:
         description: "Goal Target Value"
@@ -258,7 +258,7 @@ jobs:
           echo "steady_state=${STEADY}"                                                 >> $GITHUB_OUTPUT
           echo "ramp_down=${RAMP_DOWN}"                                                 >> $GITHUB_OUTPUT
           echo "total_duration=${TOTAL}"                                                >> $GITHUB_OUTPUT
-          echo "goal_metric=${{ inputs.goal_metric || 'transactions_per_second' }}"     >> $GITHUB_OUTPUT
+          echo "goal_metric=${{ inputs.goal_metric || 'transactions_per_hour' }}"     >> $GITHUB_OUTPUT
           echo "goal_value=${{ inputs.goal_value || '30' }}"                            >> $GITHUB_OUTPUT
           echo "goal_max_vusers=${{ inputs.goal_max_vusers || '200' }}"                 >> $GITHUB_OUTPUT
           echo "think_time_mode=${{ inputs.think_time_mode || 'ignore' }}"              >> $GITHUB_OUTPUT
