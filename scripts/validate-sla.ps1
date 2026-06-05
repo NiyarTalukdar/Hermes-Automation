@@ -116,7 +116,13 @@ if ($t) {
     CheckThreshold "P99 Response Time (ms)"  $results.p99_response_time  $t.p99_response_time_ms
     CheckThreshold "Max Response Time (ms)"  $results.max_response_time  $t.max_response_time_ms
     CheckThreshold "Error Rate (%)"          $results.error_rate         $t.error_rate_percent
-    CheckThreshold "Throughput (TPS)"        $results.tps                $t.throughput_tps        $false
+    # Check TPH first (preferred), fall back to TPS threshold
+    $tphActual = if ($results.PSObject.Properties["tph"]) { $results.tph } else { [Math]::Round($results.tps * 3600, 1) }
+    if ($t.PSObject.Properties["throughput_tph"]) {
+        CheckThreshold "Throughput (TPH)"    $tphActual                  $t.throughput_tph        $false
+    } elseif ($t.PSObject.Properties["throughput_tps"]) {
+        CheckThreshold "Throughput (TPS)"    $results.tps                $t.throughput_tps        $false
+    }
 }
 
 # ── Per-transaction checks ──────────────────────────────────────────────────
@@ -153,6 +159,8 @@ $logObj | ConvertTo-Json -Depth 4 | Set-Content $breachLogPath -Encoding UTF8
 Info "Breach log written → $breachLogPath"
 
 # ── Update summary.json with SLA result ────────────────────────────────────
+$tphValue = if ($results.PSObject.Properties["tph"]) { $results.tph } else { [Math]::Round($results.tps * 3600, 1) }
+$results | Add-Member -NotePropertyName "tph" -NotePropertyValue $tphValue -Force
 $results.sla_passed         = ($breaches.Count -eq 0)
 $results.sla_breach_count   = $breaches.Count
 $results.sla_warning_count  = $warnings.Count
