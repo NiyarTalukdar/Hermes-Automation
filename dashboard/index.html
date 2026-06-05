@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hermes-Automation — Performance Dashboard</title>
+<title>Hermes Automation — Performance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
@@ -150,7 +150,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-t
 <div id="loading"><div class="spinner"></div></div>
 
 <header>
-  <div class="logo"><div class="logo-mark">⚡</div>Hermes-Automation</div>
+  <div class="logo"><div class="logo-mark">⚡</div>Hermes Automation</div>
   <div class="header-tabs">
     <button class="tab active" onclick="showSection('overview')">Overview</button>
     <button class="tab" id="tab-apm" onclick="showSection('apm')">APM</button>
@@ -192,7 +192,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-t
   <div class="charts-grid">
     <div class="chart-card wide"><div class="chart-title">Response Time Trend <span class="tag">ms</span></div><div class="chart-wrap tall"><canvas id="chart-rt"></canvas></div></div>
     <div class="chart-card"><div class="chart-title">Error Rate <span class="tag">%</span></div><div class="chart-wrap"><canvas id="chart-err"></canvas></div></div>
-    <div class="chart-card"><div class="chart-title">Throughput <span class="tag">TPS</span></div><div class="chart-wrap"><canvas id="chart-tps"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">Throughput <span class="tag">TPH</span></div><div class="chart-wrap"><canvas id="chart-tps"></canvas></div></div>
     <div class="chart-card"><div class="chart-title">SLA Pass Rate</div><div class="chart-wrap"><canvas id="chart-sla"></canvas></div></div>
     <div class="chart-card"><div class="chart-title">VUser Distribution</div><div class="chart-wrap"><canvas id="chart-vu"></canvas></div></div>
   </div>
@@ -219,7 +219,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-t
     <div class="table-header"><span style="font-size:13px;font-weight:600">All Runs</span><span id="run-count" style="font-size:11px;color:var(--muted)"></span></div>
     <div style="overflow-x:auto">
       <table>
-        <thead><tr><th>Run</th><th>Timestamp (UTC)</th><th>Protocol</th><th>Scenario</th><th>Env</th><th>VUsers</th><th>Avg RT</th><th>P95</th><th>Error %</th><th>TPS</th><th>SLA</th></tr></thead>
+        <thead><tr><th>Run</th><th>Timestamp (UTC)</th><th>Protocol</th><th>Scenario</th><th>Env</th><th>VUsers</th><th>Avg RT</th><th>P95</th><th>Error %</th><th>TPH</th><th>SLA</th></tr></thead>
         <tbody id="run-tbody"></tbody>
       </table>
     </div>
@@ -227,7 +227,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-t
 </div>
 
 </main>
-<footer>Hermes-Automation · LoadRunner CI/CD Dashboard · GitHub Pages · APM metrics refreshed on each deploy</footer>
+<footer>Hermes Automation · LoadRunner CI/CD Dashboard · GitHub Pages · APM metrics refreshed on each deploy</footer>
 
 <script>
 // ── Tool config — one entry per supported APM tool ──────────────────────────
@@ -340,7 +340,7 @@ function renderStats(runs){
     <div class="stat-card" style="--ac:var(--blue)"><div class="stat-label">Latest Avg RT</div><div class="stat-value" style="color:${rtC}">${Math.round(lRt)}<small style="font-size:13px">ms</small></div><div class="stat-sub">SLA ≤ ${slaMax}ms</div></div>
     <div class="stat-card" style="--ac:var(--blue)"><div class="stat-label">Avg Response Time</div><div class="stat-value" style="color:var(--blue)">${Math.round(aRt)}<small style="font-size:13px">ms</small></div><div class="stat-sub">${runs.length} runs</div></div>
     <div class="stat-card" style="--ac:var(--green)"><div class="stat-label">Avg Error Rate</div><div class="stat-value" style="color:${errC}">${aErr.toFixed(2)}<small style="font-size:13px">%</small></div><div class="stat-sub">SLA ≤ ${errMax}%</div></div>
-    <div class="stat-card" style="--ac:var(--cyan)"><div class="stat-label">Avg Throughput</div><div class="stat-value" style="color:var(--cyan)">${Math.round(aTps)}<small style="font-size:13px">TPS</small></div><div class="stat-sub">SLA ≥ ${tpsMin} TPS</div></div>
+    <div class="stat-card" style="--ac:var(--cyan)"><div class="stat-label">Avg Throughput</div><div class="stat-value" style="color:var(--cyan)">${Math.round(aTps * 3600)}<small style="font-size:13px">TPH</small></div><div class="stat-sub">SLA ≥ ${tpsMin} TPH</div></div>
     <div class="stat-card" style="--ac:var(--amber)"><div class="stat-label">SLA Pass Rate</div><div class="stat-value" style="color:${slaC}">${pct}<small style="font-size:13px">%</small></div><div class="stat-sub">${pass} / ${runs.length} runs</div></div>
     <div class="stat-card" style="--ac:var(--purple)"><div class="stat-label">Total Transactions</div><div class="stat-value" style="color:var(--purple)">${runs.reduce((s,r)=>s+r.total_transactions,0).toLocaleString()}</div><div class="stat-sub">across filtered runs</div></div>`;
 }
@@ -355,8 +355,8 @@ function renderLrCharts(runs){
   ]);
   mkBar('chart-err',lbl,rev.map(r=>+r.error_rate.toFixed(3)),rev.map(r=>r.error_rate>(slaConfig.max_error_rate||1)?'#ef444488':'#3b82f666'));
   mkLine('chart-tps',lbl,[
-    {label:'TPS',data:rev.map(r=>Math.round(r.tps)),borderColor:'#06b6d4',backgroundColor:'#06b6d420',tension:.4,pointRadius:3,fill:true},
-    {label:'Min',data:rev.map(()=>slaConfig.min_tps||10),borderColor:'#f59e0b',borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
+    {label:'TPH',data:rev.map(r=>Math.round(r.tph||r.tps*3600)),borderColor:'#06b6d4',backgroundColor:'#06b6d420',tension:.4,pointRadius:3,fill:true},
+    {label:'Min TPH',data:rev.map(()=>(slaConfig.min_tph||(slaConfig.min_tps||10)*3600)),borderColor:'#f59e0b',borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
   ]);
   const passed=runs.filter(r=>r.sla_passed).length;
   mkChart('chart-sla','doughnut',{labels:['Pass','Fail'],datasets:[{data:[passed,runs.length-passed],backgroundColor:['#10b98180','#ef444460'],borderColor:['#10b981','#ef4444'],borderWidth:1}]},{extra:{cutout:'65%'},plugins:{legend:{display:true,position:'bottom',labels:{color:'#64748b',font:{size:11}}}}});
@@ -379,7 +379,7 @@ function renderTable(runs){
     <td style="${r.avg_response_time>(slaConfig.max_avg_rt||2000)?'color:var(--red)':''}">${Math.round(r.avg_response_time)}ms</td>
     <td>${Math.round(r.p95_response_time)}ms</td>
     <td style="${r.error_rate>(slaConfig.max_error_rate||1)?'color:var(--red)':''}">${r.error_rate.toFixed(3)}%</td>
-    <td>${Math.round(r.tps)}</td>
+    <td>${r.tph ? Math.round(r.tph) : Math.round(r.tps * 3600)}</td>
     <td><span class="bp ${r.sla_passed?'bp-pass':'bp-fail'}">${r.sla_passed?'PASS':'FAIL'}</span></td>
   </tr>`).join('');
 }
