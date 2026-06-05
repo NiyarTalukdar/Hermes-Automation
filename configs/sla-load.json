@@ -1,5 +1,5 @@
 {
-  "_comment": "SLA thresholds for load scenario. breach_action is overridden by workflow input.",
+  "_comment": "SLA thresholds — throughput measured in TPH (Transactions Per Hour)",
   "scenario": "load",
   "protocol": "ALL",
   "default_breach_action": "log_only",
@@ -11,7 +11,8 @@
     "p99_response_time_ms":  { "warn": 5000,  "fail": 8000  },
     "max_response_time_ms":  { "warn": 8000,  "fail": 15000 },
     "error_rate_percent":    { "warn": 0.5,   "fail": 1.0   },
-    "throughput_tps":        { "warn_below": 20, "fail_below": 10 }
+    "throughput_tph":        { "warn_below": 80, "fail_below": 60 },
+    "_tph_note": "TPH thresholds. Pipeline auto-converts: TPS × 3600 = TPH"
   },
 
   "transactions": [
