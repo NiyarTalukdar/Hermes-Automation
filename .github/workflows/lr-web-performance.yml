@@ -72,11 +72,11 @@ on:
         description: "Goal Metric (goal_oriented only)"
         required: false
         type: choice
-        options: [hits_per_second, transactions_per_second, pages_per_minute, response_time]
-        default: transactions_per_second
+        options: [transactions_per_hour, hits_per_second, pages_per_hour, response_time]
+        default: transactions_per_hour
 
       goal_value:
-        description: "Goal Target Value (e.g. 50 for 50 TPS)"
+        description: "Goal Target Value (e.g. 100 for 100 TPH)"
         required: false
         default: "50"
 
@@ -121,9 +121,9 @@ on:
         default: immediately
 
       pacing_min_seconds:
-        description: "Pacing Min Seconds (random modes) / Fixed Seconds (fixed modes)"
+        description: "Pacing Seconds — TPH formula: 3600 ÷ target_TPH = seconds (e.g. 100 TPH = 36s per iteration)"
         required: false
-        default: "0"
+        default: "36"
 
       pacing_max_seconds:
         description: "Pacing Max Seconds (random modes only)"
@@ -267,7 +267,7 @@ jobs:
           echo "steady_state=${STEADY}"                                                  >> $GITHUB_OUTPUT
           echo "ramp_down=${RAMP_DOWN}"                                                  >> $GITHUB_OUTPUT
           echo "total_duration=${TOTAL}"                                                 >> $GITHUB_OUTPUT
-          echo "goal_metric=${{ inputs.goal_metric || 'transactions_per_second' }}"      >> $GITHUB_OUTPUT
+          echo "goal_metric=${{ inputs.goal_metric || 'transactions_per_hour' }}"      >> $GITHUB_OUTPUT
           echo "goal_value=${{ inputs.goal_value || '50' }}"                             >> $GITHUB_OUTPUT
           echo "goal_max_vusers=${{ inputs.goal_max_vusers || '300' }}"                  >> $GITHUB_OUTPUT
           echo "think_time_mode=${{ inputs.think_time_mode || 'as_recorded' }}"          >> $GITHUB_OUTPUT
