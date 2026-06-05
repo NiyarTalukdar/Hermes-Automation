@@ -152,6 +152,7 @@ Write-Host "`n── Results Summary ──────────────�
 Write-Host "  Avg RT  : $($summary.avg_response_time)ms"
 Write-Host "  P95 RT  : $($summary.p95_response_time)ms"
 Write-Host "  Errors  : $($summary.error_count) ($($summary.error_rate)%)"
-Write-Host "  TPS     : $($summary.tps)"
+Write-Host "  TPH     : $($summary.tph)"
+Write-Host "  TPS     : $($summary.tps)  (= TPH ÷ 3600)"
 Write-Host "  SLA     : $($summary.sla_passed ? '✅ PASS' : '⚠️ CHECK')"
 Write-Host "────────────────────────────────────────────────────────────────" -ForegroundColor DarkGray
