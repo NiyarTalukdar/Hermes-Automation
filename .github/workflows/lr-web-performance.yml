@@ -164,7 +164,6 @@ on:
         options: [enabled, disabled]
         default: enabled
 
-      # ── Logging & Error Handling ──────────────────────────────
       sla_breach_action:
         description: "SLA Breach Action"
         required: true
@@ -175,6 +174,7 @@ on:
           - fail_job        # Fail the GitHub Actions job on breach (test already complete)
         default: log_only
 
+      # ── Logging & Error Handling ──────────────────────────────
       log_level:
         description: "VUser Log Level"
         required: false
@@ -235,16 +235,6 @@ jobs:
       network_speed:      ${{ steps.p.outputs.network_speed }}
       simulate_cache:     ${{ steps.p.outputs.simulate_cache }}
       download_non_html:  ${{ steps.p.outputs.download_non_html }}
-      sla_breach_action:
-        description: "SLA Breach Action"
-        required: true
-        type: choice
-        options:
-          - log_only        # Log violations, test continues to completion (default)
-          - warn_and_log    # Log as warning, mark job yellow, test continues
-          - fail_job        # Fail the GitHub Actions job on breach (test already complete)
-        default: log_only
-
       log_level:          ${{ steps.p.outputs.log_level }}
       sla_breach_action:  ${{ steps.p.outputs.sla_breach_action }}
       on_error:           ${{ steps.p.outputs.on_error }}
@@ -427,7 +417,7 @@ jobs:
             -ResultsPath "$env:RESULTS_DIR" `
             -SlaConfig   "configs\sla-web-$env:LR_SCENARIO.json" `
             -Protocol    "WEB" `
-            -BreachAction "${ needs.preflight.outputs.sla_breach_action }"
+            -BreachAction "${{ needs.preflight.outputs.sla_breach_action }}"
 
       - name: Upload results
         uses: actions/upload-artifact@v4
