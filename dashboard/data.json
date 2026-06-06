@@ -25,7 +25,10 @@
       "error_rate": 0.016,
       "vusers": 50,
       "sla_passed": true,
-      "tph": 111600
+      "tph": 111600,
+      "p50_response_time": 291,
+      "p75_response_time": 445,
+      "p98_response_time": 1386
     },
     {
       "run_id": "9000",
@@ -46,7 +49,10 @@
       "vusers": 100,
       "sla_passed": true,
       "browser": "chrome",
-      "tph": 133200
+      "tph": 133200,
+      "p50_response_time": 756,
+      "p75_response_time": 1157,
+      "p98_response_time": 3240
     },
     {
       "run_id": "8999",
@@ -66,7 +72,10 @@
       "error_rate": 2.96,
       "vusers": 200,
       "sla_passed": false,
-      "tph": 86400
+      "tph": 86400,
+      "p50_response_time": 2635,
+      "p75_response_time": 4030,
+      "p98_response_time": 9900
     },
     {
       "run_id": "8998",
@@ -87,7 +96,10 @@
       "vusers": 5,
       "sla_passed": true,
       "browser": "chrome",
-      "tph": 28800
+      "tph": 28800,
+      "p50_response_time": 442,
+      "p75_response_time": 676,
+      "p98_response_time": 1035
     },
     {
       "run_id": "8997",
@@ -107,7 +119,10 @@
       "error_rate": 0.005,
       "vusers": 50,
       "sla_passed": true,
-      "tph": 115200
+      "tph": 115200,
+      "p50_response_time": 270,
+      "p75_response_time": 413,
+      "p98_response_time": 1278
     },
     {
       "run_id": "8996",
@@ -128,7 +143,10 @@
       "vusers": 100,
       "sla_passed": true,
       "browser": "chrome",
-      "tph": 129600
+      "tph": 129600,
+      "p50_response_time": 646,
+      "p75_response_time": 988,
+      "p98_response_time": 2880
     },
     {
       "run_id": "8995",
@@ -148,7 +166,10 @@
       "error_rate": 0.01,
       "vusers": 50,
       "sla_passed": true,
-      "tph": 115200
+      "tph": 115200,
+      "p50_response_time": 246,
+      "p75_response_time": 377,
+      "p98_response_time": 1170
     },
     {
       "run_id": "8994",
@@ -168,7 +189,10 @@
       "error_rate": 0.308,
       "vusers": 150,
       "sla_passed": true,
-      "tph": 93600
+      "tph": 93600,
+      "p50_response_time": 1054,
+      "p75_response_time": 1612,
+      "p98_response_time": 5310
     }
   ]
 }
