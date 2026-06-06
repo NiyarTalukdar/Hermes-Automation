@@ -45,6 +45,7 @@ def main():
     parser.add_argument("--scenario",     required=True)
     parser.add_argument("--environment",  required=True)
     parser.add_argument("--status",       required=True)
+    parser.add_argument("--apm-tool",     default="none")
     parser.add_argument("--browser",      default="")
     args = parser.parse_args()
 
@@ -60,15 +61,20 @@ def main():
         "status":            args.status,
         "avg_response_time": metrics.get("avg_response_time", 0),
         "max_response_time": metrics.get("max_response_time", 0),
+        "p50_response_time": metrics.get("p50_response_time", 0),
+        "p75_response_time": metrics.get("p75_response_time", 0),
         "p90_response_time": metrics.get("p90_response_time", 0),
         "p95_response_time": metrics.get("p95_response_time", 0),
+        "p98_response_time": metrics.get("p98_response_time", 0),
         "p99_response_time": metrics.get("p99_response_time", 0),
         "error_count":       metrics.get("error_count", 0),
         "total_transactions":metrics.get("total_transactions", 0),
         "tps":               metrics.get("tps", 0),
+        "tph":               metrics.get("tph", round(metrics.get("tps", 0) * 3600, 1)),
         "error_rate":        metrics.get("error_rate", 0),
         "vusers":            metrics.get("vusers", 0),
         "sla_passed":        metrics.get("sla_passed", args.status == "success"),
+        "apm_tool":          getattr(args, "apm_tool", "none"),
     }
     if args.browser:
         record["browser"] = args.browser
