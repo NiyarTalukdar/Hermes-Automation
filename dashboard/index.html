@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hermes Automation — Performance Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root {
+:root{
   --bg:#0a0e1a;--s1:#0f1623;--s2:#151d2e;--s3:#1c2640;
   --border:#1e2d45;--border2:#243352;
   --blue:#3b82f6;--cyan:#06b6d4;--green:#10b981;--red:#ef4444;
-  --amber:#f59e0b;--purple:#8b5cf6;--pink:#ec4899;--orange:#f97316;
+  --amber:#f59e0b;--purple:#8b5cf6;--orange:#f97316;
   --text:#e2e8f0;--muted:#64748b;
   --font:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --mono:'IBM Plex Mono','Fira Code',monospace;
@@ -19,116 +20,101 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;min-height:100vh}
 
-/* Header */
-header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:200}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:-.4px}
-.logo-mark{width:30px;height:30px;background:linear-gradient(135deg,var(--blue),var(--cyan));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px}
+/* ── Header ──────────────────────────────────────── */
+header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px;letter-spacing:-.3px}
+.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--blue),var(--cyan));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
 .header-tabs{display:flex;gap:2px}
-.tab{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s}
+.tab{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s}
 .tab.active,.tab:hover{background:var(--s3);color:var(--text)}
 .tab.active{color:var(--blue)}
-.header-right{display:flex;align-items:center;gap:12px}
-.live-pill{display:flex;align-items:center;gap:6px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:20px;padding:3px 10px;font-size:11px;font-family:var(--mono);color:var(--green)}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:20px;padding:3px 9px;font-size:11px;font-family:var(--mono);color:var(--green)}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.refresh-btn{background:var(--s3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s}
-.refresh-btn:hover{color:var(--text);border-color:var(--blue)}
+.icon-btn{background:var(--s3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+.icon-btn:hover{color:var(--text);border-color:var(--blue)}
 
-/* Layout */
-main{max-width:1440px;margin:0 auto;padding:24px 28px}
+/* ── Layout ──────────────────────────────────────── */
+main{max-width:1500px;margin:0 auto;padding:20px 24px}
 .section{display:none}.section.active{display:block}
-.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.sec-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
 
-/* Filters */
-.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px 14px;align-items:center}
-.filter-group{display:flex;align-items:center;gap:6px}
-.filter-group label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+/* ── Toolbar (filters + export) ─────────────────── */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:11px 14px;align-items:center}
+.fg{display:flex;align-items:center;gap:5px}
+.fg label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
 select{background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;font-size:12px;cursor:pointer;outline:none}
 select:focus{border-color:var(--blue)}
-.filter-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.toolbar-right{margin-left:auto;display:flex;gap:6px}
+.export-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;transition:all .15s}
+.export-csv{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--green)}
+.export-csv:hover{background:rgba(16,185,129,.2)}
+.export-xl{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue)}
+.export-xl:hover{background:rgba(59,130,246,.2)}
 
-/* KPI cards */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px}
-.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s}
-.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;background:var(--ac,transparent)}
-.stat-card:hover{border-color:var(--border2)}
-.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;font-weight:600}
-.stat-value{font-size:26px;font-weight:700;font-family:var(--mono);letter-spacing:-1px;line-height:1}
-.stat-sub{font-size:11px;color:var(--muted);margin-top:5px}
+/* ── Percentile selector ─────────────────────────── */
+.pct-bar{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.pct-bar span{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.pct-btn{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--mono);transition:all .15s}
+.pct-btn:hover{border-color:var(--border2);color:var(--text)}
+.pct-btn.active{background:rgba(59,130,246,.15);border-color:var(--blue);color:var(--blue)}
 
-/* APM tool selector panel */
-.apm-selector-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.apm-selector-bar span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600}
-.tool-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
-.tool-btn:hover{border-color:var(--border2);color:var(--text)}
-.tool-btn.active{border-color:var(--tool-color,var(--blue));background:rgba(59,130,246,.08);color:var(--tool-color,var(--blue))}
-.tool-btn.disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
-.tool-dot{width:8px;height:8px;border-radius:50%;background:var(--tool-color,var(--muted));flex-shrink:0}
+/* ── KPI cards ───────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:18px}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;background:var(--ac,transparent)}
+.kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;font-weight:600}
+.kpi-val{font-size:24px;font-weight:700;font-family:var(--mono);letter-spacing:-1px;line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px}
+.kpi-delta{font-size:10px;font-weight:600;margin-top:3px}
+.delta-up{color:var(--red)}
+.delta-dn{color:var(--green)}
 
-/* APM main card */
-.apm-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
-.apm-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--s2)}
-.apm-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.apm-title-block h2{font-size:15px;font-weight:700}
-.apm-title-block p{font-size:11px;color:var(--muted);margin-top:1px}
-.apm-badge{margin-left:auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:10px}
-.apm-badge.live{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.3)}
-.apm-badge.nodata{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.3)}
-.apm-badge.none{background:rgba(100,116,139,.12);color:var(--muted);border:1px solid var(--border)}
-
-/* APM metrics grid inside card */
-.apm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
-.apm-kpi{background:var(--s2);border-radius:8px;padding:12px;text-align:center}
-.apm-kpi-val{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-.5px}
-.apm-kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
-
-/* Infra bars */
-.infra-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
-.infra-item{background:var(--s2);border-radius:8px;padding:12px}
-.infra-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
-.infra-val{font-size:20px;font-weight:700;font-family:var(--mono)}
-.bar{height:4px;background:var(--s3);border-radius:4px;margin-top:8px;overflow:hidden}
-.bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
-.infra-sub{font-size:10px;color:var(--muted);margin-top:5px}
-
-/* APM charts */
-.apm-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px 20px}
-.apm-chart-card{background:var(--s2);border-radius:8px;padding:14px}
-.apm-chart-card.wide{grid-column:1/-1}
-.apm-chart-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
-.apm-chart-wrap{height:160px;position:relative}
-.apm-chart-wrap.tall{height:220px}
-
-/* APM footer */
-.apm-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border)}
-.apm-updated{font-size:11px;color:var(--muted)}
-.apm-ext-link{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--blue);text-decoration:none;padding:5px 12px;border:1px solid var(--border2);border-radius:6px;background:var(--s2);transition:all .15s}
-.apm-ext-link:hover{border-color:var(--blue);background:rgba(59,130,246,.08)}
-
-/* No-tool placeholder */
-.apm-none{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px 24px;color:var(--muted);text-align:center}
-.apm-none .big-icon{font-size:48px;opacity:.4}
-.apm-none h3{font-size:15px;color:var(--text);font-weight:600}
-.apm-none p{font-size:13px;max-width:420px;line-height:1.6}
-
-/* LR charts */
-.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
-.chart-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+/* ── Charts ──────────────────────────────────────── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.chart-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
 .chart-card.wide{grid-column:1/-1}
-.chart-title{font-size:12px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px}
-.chart-title .tag{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--s3);color:var(--muted);border:1px solid var(--border)}
-.chart-wrap{position:relative;height:190px}
-.chart-wrap.tall{height:250px}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.chart-title{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.tag{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--s3);color:var(--muted);border:1px solid var(--border)}
+.chart-wrap{position:relative;height:180px}
+.chart-wrap.tall{height:240px}
 
-/* Table */
-.table-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
-.table-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{padding:9px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--s2)}
-td{padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--mono)}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--s2)}
+/* ── Human-readable metrics table ────────────────── */
+.metrics-table-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.mtc-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mtc-title{font-size:13px;font-weight:600}
+.mtc-sub{font-size:11px;color:var(--muted)}
+.metrics-table{width:100%;border-collapse:collapse;font-size:12px}
+.metrics-table th{padding:9px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--s2);white-space:nowrap}
+.metrics-table th.num{text-align:right}
+.metrics-table td{padding:10px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);vertical-align:middle}
+.metrics-table td.num{text-align:right}
+.metrics-table td.label-col{font-family:var(--font);font-weight:600;color:var(--text)}
+.metrics-table td.desc-col{font-family:var(--font);color:var(--muted);font-size:11px}
+.metrics-table tr:last-child td{border-bottom:none}
+.metrics-table tr:hover td{background:var(--s2)}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:var(--font)}
+.pill-pass{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.pill-warn{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.pill-fail{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.bar-cell{display:flex;align-items:center;gap:8px}
+.mini-bar{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;min-width:60px}
+.mini-bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+
+/* ── Run history table ───────────────────────────── */
+.run-table-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.rtc-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+table.runs{width:100%;border-collapse:collapse;font-size:12px}
+table.runs th{padding:9px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--s2);white-space:nowrap;cursor:pointer;user-select:none}
+table.runs th:hover{color:var(--text)}
+table.runs th.sorted{color:var(--blue)}
+table.runs td{padding:9px 14px;border-bottom:1px solid var(--border);font-family:var(--mono)}
+table.runs tr:last-child td{border-bottom:none}
+table.runs tr:hover td{background:var(--s2);cursor:pointer}
 .bp{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
 .bp-pass{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
 .bp-fail{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
@@ -136,14 +122,52 @@ tr:hover td{background:var(--s2)}
 .bp-web{background:rgba(6,182,212,.12);color:var(--cyan);border:1px solid rgba(6,182,212,.25)}
 .env-staging{color:var(--amber)}.env-production{color:var(--green)}.env-dev{color:var(--muted)}
 
-/* Loading */
+/* ── Run detail modal ────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--s1);z-index:1}
+.modal-title{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px}
+.modal-close:hover{color:var(--text);background:var(--s3)}
+.modal-body{padding:22px}
+.modal-section{margin-bottom:22px}
+.modal-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.modal-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.modal-kpi{background:var(--s2);border-radius:8px;padding:12px;text-align:center}
+.modal-kpi-val{font-size:20px;font-weight:700;font-family:var(--mono)}
+.modal-kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.detail-row{display:flex;justify-content:space-between;padding:6px 10px;background:var(--s2);border-radius:6px;font-size:12px}
+.detail-key{color:var(--muted)}
+.detail-val{font-family:var(--mono);font-weight:600}
+.pct-table{width:100%;border-collapse:collapse;font-size:12px}
+.pct-table th{padding:8px 12px;text-align:center;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--s2)}
+.pct-table td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono)}
+.pct-table tr:last-child td{border-bottom:none}
+.pct-table tr:hover td{background:var(--s2)}
+.pct-table td:first-child{text-align:left;font-family:var(--font);font-weight:600;color:var(--text)}
+.pct-highlight{color:var(--blue);font-weight:700}
+
+/* ── APM card ────────────────────────────────────── */
+.apm-card{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.apm-hdr{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--s2)}
+.apm-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.apm-badge{margin-left:auto;font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 9px;border-radius:10px}
+.apm-live{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.apm-nodata{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.apm-none-msg{display:flex;flex-direction:column;align-items:center;gap:10px;padding:40px;color:var(--muted);text-align:center}
+.tool-pills{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}
+.tool-pill{padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid}
+
+/* ── Loading ─────────────────────────────────────── */
 #loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
 #loading.gone{opacity:0;pointer-events:none}
-.spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+.spinner{width:34px;height:34px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-top:1px solid var(--border)}
-@media(max-width:900px){.charts-grid,.apm-charts{grid-template-columns:1fr}.chart-card.wide,.apm-chart-card.wide{grid-column:1}main{padding:16px}header{padding:0 16px}.header-tabs{display:none}}
+footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-top:1px solid var(--border)}
+@media(max-width:800px){.charts-grid{grid-template-columns:1fr}.chart-card.wide{grid-column:1}main{padding:14px}header{padding:0 14px}.header-tabs .tab{padding:5px 8px;font-size:11px}.detail-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -153,73 +177,254 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-t
   <div class="logo"><div class="logo-mark">⚡</div>Hermes Automation</div>
   <div class="header-tabs">
     <button class="tab active" onclick="showSection('overview')">Overview</button>
+    <button class="tab" onclick="showSection('metrics')">📋 Metrics</button>
     <button class="tab" id="tab-apm" onclick="showSection('apm')">APM</button>
     <button class="tab" onclick="showSection('runs')">Run History</button>
   </div>
-  <div class="header-right">
+  <div class="hdr-right">
     <span class="live-pill"><span class="live-dot"></span><span id="last-updated">Loading…</span></span>
-    <button class="refresh-btn" onclick="hardRefresh()">↻ Refresh</button>
+    <button class="icon-btn" onclick="hardRefresh()">↻ Refresh</button>
   </div>
 </header>
 
 <main>
 
-<!-- ══ OVERVIEW ══ -->
+<!-- ══════════════════════ OVERVIEW ══════════════════════ -->
 <div id="sec-overview" class="section active">
-  <div class="filters">
-    <div class="filter-group"><label>Protocol</label>
+
+  <!-- Toolbar: filters + percentile + export -->
+  <div class="toolbar">
+    <div class="fg"><label>Protocol</label>
       <select id="f-protocol" onchange="applyFilters()"><option value="">All</option><option value="API">API</option><option value="WEB">Web HTTP</option></select>
-    </div><div class="filter-sep"></div>
-    <div class="filter-group"><label>Environment</label>
+    </div><div class="sep"></div>
+    <div class="fg"><label>Environment</label>
       <select id="f-env" onchange="applyFilters()"><option value="">All</option><option value="dev">Dev</option><option value="staging">Staging</option><option value="production">Production</option></select>
-    </div><div class="filter-sep"></div>
-    <div class="filter-group"><label>Scenario</label>
+    </div><div class="sep"></div>
+    <div class="fg"><label>Scenario</label>
       <select id="f-scenario" onchange="applyFilters()"><option value="">All</option><option value="smoke">Smoke</option><option value="load">Load</option><option value="stress">Stress</option><option value="endurance">Endurance</option><option value="spike">Spike</option></select>
-    </div><div class="filter-sep"></div>
-    <div class="filter-group"><label>Show last</label>
-      <select id="f-count" onchange="applyFilters()"><option value="10">10 runs</option><option value="20" selected>20 runs</option><option value="50">50 runs</option></select>
+    </div><div class="sep"></div>
+    <div class="fg"><label>Show</label>
+      <select id="f-count" onchange="applyFilters()"><option value="10">10 runs</option><option value="20" selected>20 runs</option><option value="50">50 runs</option><option value="999">All</option></select>
+    </div>
+    <div class="toolbar-right">
+      <button class="export-btn export-csv" onclick="exportCSV()">⬇ CSV</button>
+      <button class="export-btn export-xl"  onclick="exportExcel()">⬇ Excel</button>
     </div>
   </div>
 
-  <div class="section-label">LoadRunner KPIs</div>
-  <div class="stats-grid" id="stats-grid"></div>
+  <!-- Percentile selector -->
+  <div class="pct-bar">
+    <span>Response Time Percentile:</span>
+    <button class="pct-btn" data-pct="avg"  onclick="setPct(this)">Avg</button>
+    <button class="pct-btn" data-pct="p50"  onclick="setPct(this)">P50</button>
+    <button class="pct-btn" data-pct="p75"  onclick="setPct(this)">P75</button>
+    <button class="pct-btn" data-pct="p90"  onclick="setPct(this)">P90</button>
+    <button class="pct-btn active" data-pct="p95" onclick="setPct(this)">P95</button>
+    <button class="pct-btn" data-pct="p98"  onclick="setPct(this)">P98</button>
+    <button class="pct-btn" data-pct="p99"  onclick="setPct(this)">P99</button>
+    <span id="pct-sla-note" style="font-size:11px;color:var(--muted);margin-left:8px"></span>
+  </div>
 
-  <!-- APM quick snapshot (overview) -->
-  <div class="section-label">APM Snapshot — <span id="ov-tool-name" style="color:var(--blue)">No tool selected</span></div>
+  <!-- KPI cards -->
+  <div class="sec-lbl">LoadRunner KPIs</div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- APM snapshot -->
+  <div class="sec-lbl">APM Snapshot — <span id="ov-tool-name" style="color:var(--blue)">No tool selected</span></div>
   <div id="ov-apm-summary"></div>
 
-  <div class="section-label">LoadRunner Trends</div>
+  <!-- Charts -->
+  <div class="sec-lbl">Trends</div>
   <div class="charts-grid">
-    <div class="chart-card wide"><div class="chart-title">Response Time Trend <span class="tag">ms</span></div><div class="chart-wrap tall"><canvas id="chart-rt"></canvas></div></div>
-    <div class="chart-card"><div class="chart-title">Error Rate <span class="tag">%</span></div><div class="chart-wrap"><canvas id="chart-err"></canvas></div></div>
-    <div class="chart-card"><div class="chart-title">Throughput <span class="tag">TPH</span></div><div class="chart-wrap"><canvas id="chart-tps"></canvas></div></div>
-    <div class="chart-card"><div class="chart-title">SLA Pass Rate</div><div class="chart-wrap"><canvas id="chart-sla"></canvas></div></div>
-    <div class="chart-card"><div class="chart-title">VUser Distribution</div><div class="chart-wrap"><canvas id="chart-vu"></canvas></div></div>
+    <div class="chart-card wide">
+      <div class="chart-hdr">
+        <div class="chart-title">Response Time Trend <span class="tag" id="rt-chart-label">P95 · ms</span></div>
+        <div style="font-size:11px;color:var(--muted)" id="rt-chart-sla"></div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="chart-rt"></canvas></div>
+    </div>
+    <div class="chart-card"><div class="chart-hdr"><div class="chart-title">Error Rate <span class="tag">%</span></div></div><div class="chart-wrap"><canvas id="chart-err"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hdr"><div class="chart-title">Throughput <span class="tag">TPH</span></div></div><div class="chart-wrap"><canvas id="chart-tph"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hdr"><div class="chart-title">SLA Pass Rate</div></div><div class="chart-wrap"><canvas id="chart-sla"></canvas></div></div>
+    <div class="chart-card"><div class="chart-hdr"><div class="chart-title">VUser Distribution</div></div><div class="chart-wrap"><canvas id="chart-vu"></canvas></div></div>
   </div>
 </div>
 
-<!-- ══ APM FULL TAB ══ -->
-<div id="sec-apm" class="section">
-  <div class="section-label">APM Monitoring</div>
+<!-- ══════════════════════ METRICS (Human-readable) ══════════════════════ -->
+<div id="sec-metrics" class="section">
 
-  <!-- Tool selector buttons — rendered dynamically -->
-  <div class="apm-selector-bar">
-    <span>Selected tool:</span>
-    <div id="tool-buttons"></div>
+  <div class="toolbar">
+    <div class="fg"><label>Protocol</label>
+      <select id="m-protocol" onchange="renderMetricsTable()"><option value="">All</option><option value="API">API</option><option value="WEB">Web HTTP</option></select>
+    </div><div class="sep"></div>
+    <div class="fg"><label>Environment</label>
+      <select id="m-env" onchange="renderMetricsTable()"><option value="">All</option><option value="dev">Dev</option><option value="staging">Staging</option><option value="production">Production</option></select>
+    </div><div class="sep"></div>
+    <div class="fg"><label>Show</label>
+      <select id="m-count" onchange="renderMetricsTable()"><option value="5">Last 5</option><option value="10" selected>Last 10</option><option value="20">Last 20</option><option value="999">All</option></select>
+    </div>
+    <div class="toolbar-right">
+      <button class="export-btn export-csv" onclick="exportMetricsCSV()">⬇ CSV</button>
+      <button class="export-btn export-xl"  onclick="exportMetricsExcel()">⬇ Excel</button>
+    </div>
   </div>
 
-  <!-- Dynamic APM card — content injected by JS based on selected_tool -->
+  <!-- Percentile selector for metrics tab -->
+  <div class="pct-bar">
+    <span>Response Time View:</span>
+    <button class="pct-btn" data-pct="avg"  onclick="setMetricsPct(this)">Avg</button>
+    <button class="pct-btn" data-pct="p50"  onclick="setMetricsPct(this)">P50</button>
+    <button class="pct-btn" data-pct="p75"  onclick="setMetricsPct(this)">P75</button>
+    <button class="pct-btn" data-pct="p90"  onclick="setMetricsPct(this)">P90</button>
+    <button class="pct-btn active" data-pct="p95" onclick="setMetricsPct(this)">P95</button>
+    <button class="pct-btn" data-pct="p98"  onclick="setMetricsPct(this)">P98</button>
+    <button class="pct-btn" data-pct="p99"  onclick="setMetricsPct(this)">P99</button>
+  </div>
+
+  <!-- Summary metrics table -->
+  <div class="sec-lbl">Performance Summary</div>
+  <div class="metrics-table-card">
+    <div class="mtc-header">
+      <div>
+        <div class="mtc-title">Response Time Analysis</div>
+        <div class="mtc-sub" id="m-subtitle">Showing across filtered runs — click a row for details</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="metrics-table" id="metrics-summary-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Description</th>
+            <th class="num">Value</th>
+            <th class="num">SLA Limit</th>
+            <th>Status</th>
+            <th>Distribution</th>
+          </tr>
+        </thead>
+        <tbody id="metrics-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Per-run percentile breakdown table -->
+  <div class="sec-lbl">Per-Run Percentile Breakdown</div>
+  <div class="metrics-table-card">
+    <div class="mtc-header">
+      <div class="mtc-title">All Response Time Percentiles — Per Run</div>
+      <div class="mtc-sub">Click any run row to see full detail</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="pct-table" id="pct-breakdown-table">
+        <thead>
+          <tr>
+            <th>Run</th>
+            <th>Timestamp</th>
+            <th>Protocol</th>
+            <th>Scenario</th>
+            <th>Avg RT</th>
+            <th>P50</th>
+            <th>P75</th>
+            <th>P90</th>
+            <th class="pct-highlight">P95</th>
+            <th>P98</th>
+            <th>P99</th>
+            <th>Max</th>
+            <th>Error %</th>
+            <th>TPH</th>
+            <th>SLA</th>
+          </tr>
+        </thead>
+        <tbody id="pct-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ APM ══════════════════════ -->
+<div id="sec-apm" class="section">
+  <div class="sec-lbl">APM Monitoring</div>
+  <div class="pct-bar" id="tool-buttons"></div>
   <div id="apm-main-card"></div>
 </div>
 
-<!-- ══ RUN HISTORY ══ -->
+<!-- ══════════════════════ RUN HISTORY ══════════════════════ -->
 <div id="sec-runs" class="section">
-  <div class="section-label">Test Run History</div>
-  <div class="table-card">
-    <div class="table-header"><span style="font-size:13px;font-weight:600">All Runs</span><span id="run-count" style="font-size:11px;color:var(--muted)"></span></div>
+  <!-- Search & Date filter bar -->
+  <div class="toolbar" style="flex-wrap:wrap;gap:10px">
+    <div class="fg"><label>🔍 Run ID</label>
+      <input id="r-runid" type="text" placeholder="e.g. 9001" oninput="renderRunTable()"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;font-size:12px;outline:none;width:90px;font-family:var(--mono)">
+    </div><div class="sep"></div>
+    <div class="fg"><label>Protocol</label>
+      <select id="r-protocol" onchange="renderRunTable()"><option value="">All</option><option value="API">API</option><option value="WEB">Web HTTP</option></select>
+    </div><div class="sep"></div>
+    <div class="fg"><label>Environment</label>
+      <select id="r-env" onchange="renderRunTable()"><option value="">All</option><option value="dev">Dev</option><option value="staging">Staging</option><option value="production">Production</option></select>
+    </div><div class="sep"></div>
+    <div class="fg"><label>Scenario</label>
+      <select id="r-scenario" onchange="renderRunTable()"><option value="">All</option><option value="smoke">Smoke</option><option value="load">Load</option><option value="stress">Stress</option><option value="endurance">Endurance</option><option value="spike">Spike</option></select>
+    </div><div class="sep"></div>
+    <div class="fg"><label>SLA</label>
+      <select id="r-sla" onchange="renderRunTable()"><option value="">All</option><option value="pass">Pass only</option><option value="fail">Fail only</option></select>
+    </div>
+    <div class="toolbar-right">
+      <button class="export-btn export-csv" onclick="exportRunsCSV()">⬇ CSV</button>
+      <button class="export-btn export-xl"  onclick="exportRunsExcel()">⬇ Excel</button>
+    </div>
+  </div>
+
+  <!-- Date range + quick-jump bar -->
+  <div class="toolbar" style="gap:10px;flex-wrap:wrap">
+    <div class="fg"><label>📅 From</label>
+      <input id="r-date-from" type="date" onchange="renderRunTable()"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;font-size:12px;outline:none;font-family:var(--font)">
+    </div>
+    <div class="fg"><label>To</label>
+      <input id="r-date-to" type="date" onchange="renderRunTable()"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;font-size:12px;outline:none;font-family:var(--font)">
+    </div>
+    <div class="sep"></div>
+    <div class="fg"><label>Quick jump</label>
+      <div style="display:flex;gap:5px;flex-wrap:wrap" id="quick-jump-btns">
+        <button class="icon-btn" onclick="quickJump('today')">Today</button>
+        <button class="icon-btn" onclick="quickJump('yesterday')">Yesterday</button>
+        <button class="icon-btn" onclick="quickJump('this_week')">This week</button>
+        <button class="icon-btn" onclick="quickJump('last_week')">Last week</button>
+        <button class="icon-btn" onclick="quickJump('this_month')">This month</button>
+        <button class="icon-btn" onclick="quickJump('last_month')">Last month</button>
+        <button class="icon-btn" onclick="quickJump('same_day_last_month')">Same day last month</button>
+        <button class="icon-btn" onclick="quickJump('same_day_last_year')">Same day last year</button>
+        <button class="icon-btn" onclick="quickJump('last_30')">Last 30 days</button>
+        <button class="icon-btn" onclick="quickJump('last_90')">Last 90 days</button>
+        <button class="icon-btn" style="color:var(--red)" onclick="clearDateFilter()">✕ Clear</button>
+      </div>
+    </div>
+    <div class="fg" style="margin-left:auto">
+    </div>
+  </div>
+
+  <div class="run-table-card">
+    <div class="rtc-header">
+      <span style="font-size:13px;font-weight:600">Test Run History</span>
+    </div>
     <div style="overflow-x:auto">
-      <table>
-        <thead><tr><th>Run</th><th>Timestamp (UTC)</th><th>Protocol</th><th>Scenario</th><th>Env</th><th>VUsers</th><th>Avg RT</th><th>P95</th><th>Error %</th><th>TPH</th><th>SLA</th></tr></thead>
+      <table class="runs" id="run-table">
+        <thead><tr>
+          <th onclick="sortRuns('run_id')">Run ↕</th>
+          <th onclick="sortRuns('timestamp')">Timestamp (UTC) ↕</th>
+          <th>Protocol</th>
+          <th onclick="sortRuns('scenario')">Scenario ↕</th>
+          <th>Env</th>
+          <th onclick="sortRuns('vusers')">VUsers ↕</th>
+          <th onclick="sortRuns('avg_response_time')">Avg RT ↕</th>
+          <th onclick="sortRuns('p90_response_time')">P90 ↕</th>
+          <th onclick="sortRuns('p95_response_time')">P95 ↕</th>
+          <th onclick="sortRuns('p99_response_time')">P99 ↕</th>
+          <th onclick="sortRuns('error_rate')">Error % ↕</th>
+          <th onclick="sortRuns('tph')">TPH ↕</th>
+          <th onclick="sortRuns('sla_passed')">SLA ↕</th>
+        </tr></thead>
         <tbody id="run-tbody"></tbody>
       </table>
     </div>
@@ -227,381 +432,681 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:11px;border-t
 </div>
 
 </main>
-<footer>Hermes Automation · LoadRunner CI/CD Dashboard · GitHub Pages · APM metrics refreshed on each deploy</footer>
+
+<!-- ══════════════════════ RUN DETAIL MODAL ══════════════════════ -->
+<div class="modal-overlay" id="run-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Run Detail</div>
+      <button class="modal-close" onclick="document.getElementById('run-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<footer>Hermes Automation · LoadRunner CI/CD Dashboard · GitHub Pages · No login required</footer>
 
 <script>
-// ── Tool config — one entry per supported APM tool ──────────────────────────
-const TOOLS = {
-  datadog:     { label:'Datadog',     icon:'🟣', color:'#a855f7', bg:'rgba(168,85,247,.12)' },
-  dynatrace:   { label:'Dynatrace',   icon:'🔷', color:'#6366f1', bg:'rgba(99,102,241,.12)' },
-  appdynamics: { label:'AppDynamics', icon:'🌀', color:'#06b6d4', bg:'rgba(6,182,212,.12)'  },
-  newrelic:    { label:'New Relic',   icon:'🟢', color:'#10b981', bg:'rgba(16,185,129,.12)' },
-  splunk:      { label:'Splunk',      icon:'🔴', color:'#ef4444', bg:'rgba(239,68,68,.12)'  },
-  elastic:     { label:'Elastic',     icon:'🟡', color:'#f59e0b', bg:'rgba(245,158,11,.12)' },
-  grafana:     { label:'Grafana',     icon:'📈', color:'#f97316', bg:'rgba(249,115,22,.12)' },
-  none:        { label:'None',        icon:'⛔', color:'#64748b', bg:'rgba(100,116,139,.12)'},
+// ── Tool config ────────────────────────────────────────────────
+const TOOLS={
+  datadog:    {label:'Datadog',    icon:'🟣',color:'#a855f7',bg:'rgba(168,85,247,.12)'},
+  dynatrace:  {label:'Dynatrace', icon:'🔷',color:'#6366f1',bg:'rgba(99,102,241,.12)'},
+  appdynamics:{label:'AppDynamics',icon:'🌀',color:'#06b6d4',bg:'rgba(6,182,212,.12)'},
+  newrelic:   {label:'New Relic', icon:'🟢',color:'#10b981',bg:'rgba(16,185,129,.12)'},
+  splunk:     {label:'Splunk',    icon:'🔴',color:'#ef4444',bg:'rgba(239,68,68,.12)'},
+  elastic:    {label:'Elastic',   icon:'🟡',color:'#f59e0b',bg:'rgba(245,158,11,.12)'},
+  grafana:    {label:'Grafana',   icon:'📈',color:'#f97316',bg:'rgba(249,115,22,.12)'},
 };
 
-// ── Normalise any tool's metric dict into a common shape ────────────────────
-function normalise(m, tool) {
-  if (!m || m.error) return null;
-  return {
-    // primary response time (whichever key exists)
-    rt:    m.response_time_p95_ms ?? m.avg_response_time_ms ?? m.avg_response_time ?? m.p95_response_time_ms ?? 0,
-    rtLbl: m.response_time_p95_ms != null ? 'P95 RT (ms)' : 'Avg RT (ms)',
-    // error rate
-    err:   m.error_rate_pct ?? m.service_error_rate ?? m.error_rate ?? 0,
-    // throughput
-    tput:  m.throughput_rpm ?? m.throughput_rps ?? m.calls_per_min ?? m.throughput_tps ?? 0,
-    tputLbl: m.throughput_rps != null ? 'Throughput (rps)' : m.calls_per_min != null ? 'Calls/min' : 'Throughput',
-    // open issues
-    issues: m.open_problems ?? m.open_alerts ?? m.open_violations ?? 0,
-    issuesLbl: m.open_problems != null ? 'Open Problems' : m.open_alerts != null ? 'Open Alerts' : 'Violations',
-    // cpu / memory
-    cpu:    m.cpu_usage_pct ?? m.cpu_busy_pct ?? null,
-    mem:    m.memory_usage_pct ?? m.memory_used_mb ?? null,
-    memLbl: m.memory_usage_pct != null ? 'Mem Usage %' : 'Heap Used (MB)',
-    // LR custom metrics trends
-    lrRt:  m.lr_avg_rt_trend   ?? m.response_time_trend ?? [],
-    lrErr: m.lr_error_rate_trend ?? [],
-    lrTps: m.lr_tps_trend ?? [],
-    // links & meta
-    url:        m.dashboard_url ?? '#',
-    fetchedAt:  m.fetched_at ?? '',
-    raw: m,
-  };
+// ── State ──────────────────────────────────────────────────────
+let allRuns=[], slaConfig={}, apmData={}, charts={};
+let activePct='p95', metricsActivePct='p95';
+let sortKey='timestamp', sortAsc=false;
+
+// ── Percentile helpers ─────────────────────────────────────────
+const PCT_FIELD={
+  avg:'avg_response_time', p50:'p50_response_time', p75:'p75_response_time',
+  p90:'p90_response_time', p95:'p95_response_time', p98:'p98_response_time', p99:'p99_response_time'
+};
+const PCT_LABEL={avg:'Avg RT',p50:'P50',p75:'P75',p90:'P90',p95:'P95',p98:'P98',p99:'P99'};
+
+function getRtValue(run, pct){ return run[PCT_FIELD[pct]??'p95_response_time'] ?? run.avg_response_time ?? 0; }
+
+function setPct(btn){
+  document.querySelectorAll('.pct-bar .pct-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activePct = btn.dataset.pct;
+  const runs=filteredRuns();
+  renderCharts(runs);
+  document.getElementById('rt-chart-label').textContent = PCT_LABEL[activePct]+' · ms';
+  const slaMax=slaConfig.max_avg_rt||2000;
+  document.getElementById('rt-chart-sla').textContent = `SLA ≤ ${slaMax}ms`;
+  document.getElementById('pct-sla-note').textContent = activePct==='avg'?'':'Note: SLA limit shown is for avg RT — adjust thresholds per percentile in sla-load.json';
 }
 
-// ── State ───────────────────────────────────────────────────────────────────
-let allRuns=[], slaConfig={}, apmData={}, charts={};
+function setMetricsPct(btn){
+  document.querySelectorAll('#sec-metrics .pct-bar .pct-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  metricsActivePct=btn.dataset.pct;
+  renderMetricsTable();
+  // Update P95 column header highlight
+  document.querySelectorAll('#pct-breakdown-table th').forEach(th=>{
+    th.classList.remove('pct-highlight');
+    if(th.textContent===PCT_LABEL[metricsActivePct]) th.classList.add('pct-highlight');
+  });
+}
 
-// ── Tab switching ───────────────────────────────────────────────────────────
-function showSection(name) {
+// ── Tab switching ──────────────────────────────────────────────
+function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('sec-'+name).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>{
-    if(t.textContent.toLowerCase().replace(/\s/g,'')=== name ||
-       (name==='apm' && t.id==='tab-apm')) t.classList.add('active');
+    if(t.textContent.trim().replace(/[⚡📋]/g,'').trim().toLowerCase().replace(/\s/g,'')=== name ||
+       t.id==='tab-apm'&&name==='apm') t.classList.add('active');
   });
+  if(name==='metrics') renderMetricsTable();
+  if(name==='runs') renderRunTable();
 }
 
-// ── Load data ───────────────────────────────────────────────────────────────
-async function loadAll() {
-  const [lr, apm] = await Promise.allSettled([
+// ── Data loading ───────────────────────────────────────────────
+async function loadAll(){
+  const [lr,apm]=await Promise.allSettled([
     fetch('data.json?t='+Date.now()).then(r=>r.json()),
     fetch('apm-metrics.json?t='+Date.now()).then(r=>r.json()),
   ]);
-  if(lr.status==='fulfilled'){ allRuns=lr.value.runs||[]; slaConfig=lr.value.sla_config||{}; }
+  if(lr.status==='fulfilled'){allRuns=lr.value.runs||[];slaConfig=lr.value.sla_config||{};}
   if(apm.status==='fulfilled') apmData=apm.value;
 }
 
-// ── Chart helpers ───────────────────────────────────────────────────────────
-const GRID={color:'#1e2d45'}, TICK={color:'#475569',font:{size:10},maxTicksLimit:8};
-const PLUG={legend:{display:false},tooltip:{titleColor:'#e2e8f0',bodyColor:'#94a3b8',backgroundColor:'#151d2e',borderColor:'#1e2d45',borderWidth:1}};
-
-function mkChart(id, type, data, opts={}) {
-  const ctx=document.getElementById(id); if(!ctx) return;
-  if(charts[id]) charts[id].destroy();
-  charts[id]=new Chart(ctx,{type,data,options:{
-    responsive:true,maintainAspectRatio:false,
-    plugins:{...PLUG,...(opts.plugins||{})},
-    scales: type!=='doughnut'?{x:{ticks:{...TICK,maxRotation:45},grid:GRID},y:{ticks:TICK,grid:GRID}}:undefined,
-    ...(opts.extra||{})
-  }});
-}
-
-function mkLine(id,labels,datasets){ mkChart(id,'line',{labels,datasets}); }
-function mkBar(id,labels,data,color){ mkChart(id,'bar',{labels,datasets:[{data,backgroundColor:color}]}); }
-function mkSparkline(id,data,color){
-  const ctx=document.getElementById(id); if(!ctx||!data?.length) return;
-  if(charts[id]) charts[id].destroy();
-  charts[id]=new Chart(ctx,{type:'line',data:{labels:data.map((_,i)=>i),datasets:[{data,borderColor:color,backgroundColor:color+'22',borderWidth:1.5,pointRadius:0,fill:true,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
-}
-
-// ── LR KPI cards ────────────────────────────────────────────────────────────
+// ── Filters ────────────────────────────────────────────────────
 function filteredRuns(){
-  const p=document.getElementById('f-protocol').value, e=document.getElementById('f-env').value,
-        s=document.getElementById('f-scenario').value, n=parseInt(document.getElementById('f-count').value)||20;
+  const p=document.getElementById('f-protocol').value,
+        e=document.getElementById('f-env').value,
+        s=document.getElementById('f-scenario').value,
+        n=parseInt(document.getElementById('f-count').value)||20;
   return allRuns.filter(r=>(!p||r.protocol===p)&&(!e||r.environment===e)&&(!s||r.scenario===s)).slice(0,n);
 }
+function metricRuns(){
+  const p=document.getElementById('m-protocol').value,
+        e=document.getElementById('m-env').value,
+        n=parseInt(document.getElementById('m-count').value)||10;
+  return allRuns.filter(r=>(!p||r.protocol===p)&&(!e||r.environment===e)).slice(0,n);
+}
+function isoDate(d){ return d.toISOString().slice(0,10); }
+function startOfDay(d){ const x=new Date(d);x.setHours(0,0,0,0);return x; }
+function endOfDay(d){ const x=new Date(d);x.setHours(23,59,59,999);return x; }
 
-function renderStats(runs){
-  if(!runs.length){document.getElementById('stats-grid').innerHTML='<p style="padding:16px;color:var(--muted)">No runs match filters.</p>';return;}
-  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length;
-  const slaMax=slaConfig.max_avg_rt||2000, errMax=slaConfig.max_error_rate||1, tpsMin=slaConfig.min_tps||10;
-  const lRt=runs[0].avg_response_time, aRt=avg(runs.map(r=>r.avg_response_time));
-  const aErr=avg(runs.map(r=>r.error_rate)), aTps=avg(runs.map(r=>r.tps));
-  const pass=runs.filter(r=>r.sla_passed).length, pct=(pass/runs.length*100).toFixed(0);
-  const rtC=lRt>slaMax?'var(--red)':lRt>slaMax*.8?'var(--amber)':'var(--blue)';
-  const errC=aErr>errMax?'var(--red)':aErr>errMax*.5?'var(--amber)':'var(--green)';
-  const slaC=pct<80?'var(--red)':pct<90?'var(--amber)':'var(--green)';
-  document.getElementById('stats-grid').innerHTML=`
-    <div class="stat-card" style="--ac:var(--blue)"><div class="stat-label">Latest Avg RT</div><div class="stat-value" style="color:${rtC}">${Math.round(lRt)}<small style="font-size:13px">ms</small></div><div class="stat-sub">SLA ≤ ${slaMax}ms</div></div>
-    <div class="stat-card" style="--ac:var(--blue)"><div class="stat-label">Avg Response Time</div><div class="stat-value" style="color:var(--blue)">${Math.round(aRt)}<small style="font-size:13px">ms</small></div><div class="stat-sub">${runs.length} runs</div></div>
-    <div class="stat-card" style="--ac:var(--green)"><div class="stat-label">Avg Error Rate</div><div class="stat-value" style="color:${errC}">${aErr.toFixed(2)}<small style="font-size:13px">%</small></div><div class="stat-sub">SLA ≤ ${errMax}%</div></div>
-    <div class="stat-card" style="--ac:var(--cyan)"><div class="stat-label">Avg Throughput</div><div class="stat-value" style="color:var(--cyan)">${Math.round(aTps * 3600)}<small style="font-size:13px">TPH</small></div><div class="stat-sub">SLA ≥ ${tpsMin} TPH</div></div>
-    <div class="stat-card" style="--ac:var(--amber)"><div class="stat-label">SLA Pass Rate</div><div class="stat-value" style="color:${slaC}">${pct}<small style="font-size:13px">%</small></div><div class="stat-sub">${pass} / ${runs.length} runs</div></div>
-    <div class="stat-card" style="--ac:var(--purple)"><div class="stat-label">Total Transactions</div><div class="stat-value" style="color:var(--purple)">${runs.reduce((s,r)=>s+r.total_transactions,0).toLocaleString()}</div><div class="stat-sub">across filtered runs</div></div>`;
+function quickJump(period){
+  const now=new Date();
+  let from,to;
+  switch(period){
+    case 'today':
+      from=to=isoDate(now); break;
+    case 'yesterday':{
+      const y=new Date(now);y.setDate(y.getDate()-1);
+      from=to=isoDate(y);break;}
+    case 'this_week':{
+      const s=new Date(now);s.setDate(s.getDate()-s.getDay());
+      from=isoDate(s);to=isoDate(now);break;}
+    case 'last_week':{
+      const s=new Date(now);s.setDate(s.getDate()-s.getDay()-7);
+      const e=new Date(s);e.setDate(e.getDate()+6);
+      from=isoDate(s);to=isoDate(e);break;}
+    case 'this_month':
+      from=isoDate(new Date(now.getFullYear(),now.getMonth(),1));to=isoDate(now);break;
+    case 'last_month':{
+      const s=new Date(now.getFullYear(),now.getMonth()-1,1);
+      const e=new Date(now.getFullYear(),now.getMonth(),0);
+      from=isoDate(s);to=isoDate(e);break;}
+    case 'same_day_last_month':{
+      const d=new Date(now);d.setMonth(d.getMonth()-1);
+      from=to=isoDate(d);break;}
+    case 'same_day_last_year':{
+      const d=new Date(now);d.setFullYear(d.getFullYear()-1);
+      from=to=isoDate(d);break;}
+    case 'last_30':{
+      const d=new Date(now);d.setDate(d.getDate()-30);
+      from=isoDate(d);to=isoDate(now);break;}
+    case 'last_90':{
+      const d=new Date(now);d.setDate(d.getDate()-90);
+      from=isoDate(d);to=isoDate(now);break;}
+  }
+  document.getElementById('r-date-from').value=from||'';
+  document.getElementById('r-date-to').value=to||'';
+  renderRunTable();
+  showDateFeedback(from,to,period);
 }
 
-function renderLrCharts(runs){
-  if(!runs.length) return;
-  const rev=[...runs].reverse(), lbl=rev.map(r=>'#'+r.run_id);
-  mkLine('chart-rt',lbl,[
-    {label:'Avg RT',data:rev.map(r=>Math.round(r.avg_response_time)),borderColor:'#3b82f6',backgroundColor:'#3b82f620',tension:.4,pointRadius:3,fill:true},
-    {label:'P95 RT',data:rev.map(r=>Math.round(r.p95_response_time)),borderColor:'#f59e0b',backgroundColor:'transparent',tension:.4,pointRadius:3,borderDash:[5,3]},
-    {label:'SLA',data:rev.map(()=>slaConfig.max_avg_rt||2000),borderColor:'#ef4444',borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
-  ]);
-  mkBar('chart-err',lbl,rev.map(r=>+r.error_rate.toFixed(3)),rev.map(r=>r.error_rate>(slaConfig.max_error_rate||1)?'#ef444488':'#3b82f666'));
-  mkLine('chart-tps',lbl,[
-    {label:'TPH',data:rev.map(r=>Math.round(r.tph||r.tps*3600)),borderColor:'#06b6d4',backgroundColor:'#06b6d420',tension:.4,pointRadius:3,fill:true},
-    {label:'Min TPH',data:rev.map(()=>(slaConfig.min_tph||(slaConfig.min_tps||10)*3600)),borderColor:'#f59e0b',borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
-  ]);
-  const passed=runs.filter(r=>r.sla_passed).length;
-  mkChart('chart-sla','doughnut',{labels:['Pass','Fail'],datasets:[{data:[passed,runs.length-passed],backgroundColor:['#10b98180','#ef444460'],borderColor:['#10b981','#ef4444'],borderWidth:1}]},{extra:{cutout:'65%'},plugins:{legend:{display:true,position:'bottom',labels:{color:'#64748b',font:{size:11}}}}});
-  const vuMap={};
-  runs.forEach(r=>{const k=String(r.vusers||0);vuMap[k]=(vuMap[k]||0)+1;});
-  const vk=Object.keys(vuMap).sort((a,b)=>+a-+b);
-  mkBar('chart-vu',vk.map(k=>k+' VU'),vk.map(k=>vuMap[k]),'#6366f166');
+function showDateFeedback(from,to,period){
+  const el=document.getElementById('run-count');
+  const label={
+    today:'Today',yesterday:'Yesterday',this_week:'This week',last_week:'Last week',
+    this_month:'This month',last_month:'Last month',
+    same_day_last_month:'Same day last month',
+    same_day_last_year:'Same day last year',
+    last_30:'Last 30 days',last_90:'Last 90 days',
+  }[period]||period;
+  // run count updated by renderRunTable, just set label hint
 }
 
-function renderTable(runs){
-  document.getElementById('run-count').textContent=`${runs.length} runs`;
-  const tbody=document.getElementById('run-tbody');
-  if(!runs.length){tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">No runs match filters</td></tr>';return;}
-  const ft=iso=>new Date(iso).toISOString().replace('T',' ').slice(0,16);
-  tbody.innerHTML=runs.map(r=>`<tr>
-    <td>#${r.run_id}</td><td>${ft(r.timestamp)}</td>
-    <td><span class="bp bp-${r.protocol.toLowerCase()}">${r.protocol}</span></td>
-    <td>${r.scenario}</td><td class="env-${r.environment}">${r.environment}</td>
-    <td>${r.vusers||'—'}</td>
-    <td style="${r.avg_response_time>(slaConfig.max_avg_rt||2000)?'color:var(--red)':''}">${Math.round(r.avg_response_time)}ms</td>
-    <td>${Math.round(r.p95_response_time)}ms</td>
-    <td style="${r.error_rate>(slaConfig.max_error_rate||1)?'color:var(--red)':''}">${r.error_rate.toFixed(3)}%</td>
-    <td>${r.tph ? Math.round(r.tph) : Math.round(r.tps * 3600)}</td>
-    <td><span class="bp ${r.sla_passed?'bp-pass':'bp-fail'}">${r.sla_passed?'PASS':'FAIL'}</span></td>
-  </tr>`).join('');
+function clearDateFilter(){
+  document.getElementById('r-date-from').value='';
+  document.getElementById('r-date-to').value='';
+  document.getElementById('r-runid').value='';
+  renderRunTable();
 }
 
-// ── APM rendering ────────────────────────────────────────────────────────────
-function renderToolButtons(selectedTool){
-  const container=document.getElementById('tool-buttons');
-  if(!container) return;
-  container.innerHTML='';
-  container.style.display='flex'; container.style.gap='8px'; container.style.flexWrap='wrap';
+function runTableRuns(){
+  const p      = document.getElementById('r-protocol').value;
+  const e      = document.getElementById('r-env').value;
+  const sc     = document.getElementById('r-scenario').value;
+  const sla    = document.getElementById('r-sla').value;
+  const runId  = (document.getElementById('r-runid').value||'').trim();
+  const dateFrom = document.getElementById('r-date-from').value;
+  const dateTo   = document.getElementById('r-date-to').value;
+  const n = 9999; // show all that match filters
 
-  const available = selectedTool && selectedTool !== 'none' ? [selectedTool] : [];
-
-  Object.entries(TOOLS).forEach(([key,cfg])=>{
-    const isSelected = key === selectedTool;
-    const isNone     = key === 'none';
-    if(isNone) return; // skip 'none' button
-    const btn=document.createElement('button');
-    btn.className='tool-btn'+(isSelected?' active':'');
-    btn.style.setProperty('--tool-color', cfg.color);
-    btn.innerHTML=`<span class="tool-dot" style="background:${isSelected?cfg.color:'var(--muted)'}"></span>${cfg.icon} ${cfg.label}`;
-    if(!isSelected) btn.classList.add('disabled');
-    container.appendChild(btn);
+  let runs = allRuns.filter(r => {
+    if(p   && r.protocol    !== p)   return false;
+    if(e   && r.environment !== e)   return false;
+    if(sc  && r.scenario    !== sc)  return false;
+    if(sla && (sla==='pass' ? !r.sla_passed : r.sla_passed)) return false;
+    if(runId && !String(r.run_id).includes(runId)) return false;
+    if(dateFrom || dateTo){
+      const rDate = r.timestamp.slice(0,10);
+      if(dateFrom && rDate < dateFrom) return false;
+      if(dateTo   && rDate > dateTo)   return false;
+    }
+    return true;
   });
 
-  // Update APM tab label
-  const tabBtn=document.getElementById('tab-apm');
-  if(tabBtn && selectedTool && selectedTool!=='none'){
-    const cfg=TOOLS[selectedTool];
-    tabBtn.textContent=`${cfg.icon} ${cfg.label}`;
-  } else if(tabBtn){
-    tabBtn.textContent='APM';
-  }
+  runs.sort((a,b)=>{
+    const av=a[sortKey]??0, bv=b[sortKey]??0;
+    return sortAsc ? (av>bv?1:-1) : (av<bv?1:-1);
+  });
+  return runs;
 }
 
-function renderApmOverviewCard(tool, m){
-  const container=document.getElementById('ov-apm-summary');
-  const toolName=document.getElementById('ov-tool-name');
+function applyFilters(){const runs=filteredRuns();renderKPIs(runs);renderCharts(runs);}
 
-  if(!tool || tool==='none'){
-    toolName.textContent='None selected — choose a tool when running the workflow';
-    toolName.style.color='var(--muted)';
-    container.innerHTML=`<div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:32px;text-align:center;color:var(--muted)">
-      <div style="font-size:32px;margin-bottom:8px">⛔</div>
-      <div style="font-weight:600;margin-bottom:6px;color:var(--text)">No APM tool selected</div>
-      <div style="font-size:12px">Select an APM tool in the workflow <strong>Run workflow</strong> inputs to see live metrics here.</div>
-    </div>`;
-    return;
-  }
+// ── KPI cards ──────────────────────────────────────────────────
+function renderKPIs(runs){
+  if(!runs.length){document.getElementById('kpi-grid').innerHTML='<p style="color:var(--muted);padding:16px">No runs match filters.</p>';return;}
+  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length;
+  const slaMax=slaConfig.max_avg_rt||2000, errMax=slaConfig.max_error_rate||1;
+  const tphMin=slaConfig.min_tph||(slaConfig.min_tps||10)*3600;
 
-  const cfg=TOOLS[tool]||TOOLS.none;
-  toolName.textContent=`${cfg.icon} ${cfg.label}`;
-  toolName.style.color=cfg.color;
+  const latRt=getRtValue(runs[0],activePct);
+  const avgRt=avg(runs.map(r=>getRtValue(r,activePct)));
+  const prevRt=runs.length>1?getRtValue(runs[1],activePct):null;
+  const delta=prevRt?((latRt-prevRt)/prevRt*100).toFixed(1):null;
+  const avgErr=avg(runs.map(r=>r.error_rate));
+  const avgTph=avg(runs.map(r=>r.tph||r.tps*3600));
+  const pass=runs.filter(r=>r.sla_passed).length;
+  const pct=(pass/runs.length*100).toFixed(0);
+  const rtColor=latRt>slaMax?'var(--red)':latRt>slaMax*.8?'var(--amber)':'var(--blue)';
+  const errColor=avgErr>errMax?'var(--red)':avgErr>errMax*.5?'var(--amber)':'var(--green)';
+  const slaColor=+pct<80?'var(--red)':+pct<90?'var(--amber)':'var(--green)';
 
-  if(!m){
-    container.innerHTML=`<div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:32px;text-align:center;color:var(--muted)">
-      <div style="font-size:32px;margin-bottom:8px">${cfg.icon}</div>
-      <div style="font-weight:600;margin-bottom:6px;color:var(--text)">${cfg.label} — No Data</div>
-      <div style="font-size:12px">Credentials may not be configured. Check <code>SECRETS_SETUP.md</code> for required secrets.</div>
-    </div>`;
-    return;
-  }
-
-  const n=normalise(m,tool);
-  if(!n){ container.innerHTML=''; return; }
-
-  const errColor=n.err>1?'var(--red)':n.err>0.5?'var(--amber)':'var(--green)';
-  const issColor=n.issues>0?'var(--red)':'var(--green)';
-
-  container.innerHTML=`
-    <div style="background:var(--s1);border:1px solid ${cfg.color}44;border-radius:10px;overflow:hidden">
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--s2)">
-        <div style="width:34px;height:34px;border-radius:8px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:18px">${cfg.icon}</div>
-        <div><div style="font-size:14px;font-weight:700">${cfg.label}</div><div style="font-size:11px;color:var(--muted)">Live metrics — last 1h</div></div>
-        <span style="margin-left:auto;font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:10px;background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.3)">LIVE</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)">
-        <div style="background:var(--s2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${cfg.color}">${Math.round(n.rt)}</div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">${n.rtLbl}</div>
-        </div>
-        <div style="background:var(--s2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${errColor}">${n.err.toFixed(3)}%</div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Error Rate</div>
-        </div>
-        <div style="background:var(--s2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--cyan)">${Math.round(n.tput)}</div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">${n.tputLbl}</div>
-        </div>
-        <div style="background:var(--s2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${issColor}">${n.issues}</div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">${n.issuesLbl}</div>
-        </div>
-        ${n.cpu!=null?`<div style="background:var(--s2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--blue)">${n.cpu}%</div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">CPU</div></div>`:''}
-        ${n.mem!=null?`<div style="background:var(--s2);border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--purple)">${Math.round(n.mem)}</div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">${n.memLbl}</div></div>`:''}
-      </div>
-      <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;color:var(--muted)">Fetched ${n.fetchedAt?new Date(n.fetchedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':'—'}</span>
-        <a href="#" onclick="showSection('apm');return false" style="font-size:12px;color:${cfg.color};text-decoration:none;padding:5px 12px;border:1px solid ${cfg.color}44;border-radius:6px;background:var(--s2)">View full panel →</a>
-      </div>
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi" style="--ac:var(--blue)">
+      <div class="kpi-lbl">Latest ${PCT_LABEL[activePct]} RT</div>
+      <div class="kpi-val" style="color:${rtColor}">${Math.round(latRt)}<small style="font-size:12px">ms</small></div>
+      ${delta?`<div class="kpi-delta ${+delta>0?'delta-up':'delta-dn'}">${+delta>0?'▲':'▼'} ${Math.abs(delta)}% vs prev</div>`:''}
+      <div class="kpi-sub">SLA ≤ ${slaMax}ms</div>
+    </div>
+    <div class="kpi" style="--ac:var(--cyan)">
+      <div class="kpi-lbl">Avg ${PCT_LABEL[activePct]} RT (${runs.length} runs)</div>
+      <div class="kpi-val" style="color:var(--cyan)">${Math.round(avgRt)}<small style="font-size:12px">ms</small></div>
+      <div class="kpi-sub">across filtered runs</div>
+    </div>
+    <div class="kpi" style="--ac:var(--green)">
+      <div class="kpi-lbl">Avg Error Rate</div>
+      <div class="kpi-val" style="color:${errColor}">${avgErr.toFixed(2)}<small style="font-size:12px">%</small></div>
+      <div class="kpi-sub">SLA ≤ ${errMax}%</div>
+    </div>
+    <div class="kpi" style="--ac:var(--purple)">
+      <div class="kpi-lbl">Avg Throughput</div>
+      <div class="kpi-val" style="color:var(--purple)">${Math.round(avgTph)}<small style="font-size:12px">TPH</small></div>
+      <div class="kpi-sub">SLA ≥ ${Math.round(tphMin)} TPH</div>
+    </div>
+    <div class="kpi" style="--ac:var(--amber)">
+      <div class="kpi-lbl">SLA Pass Rate</div>
+      <div class="kpi-val" style="color:${slaColor}">${pct}<small style="font-size:12px">%</small></div>
+      <div class="kpi-sub">${pass} / ${runs.length} runs</div>
+    </div>
+    <div class="kpi" style="--ac:var(--orange)">
+      <div class="kpi-lbl">Total Transactions</div>
+      <div class="kpi-val" style="color:var(--orange)">${runs.reduce((s,r)=>s+r.total_transactions,0).toLocaleString()}</div>
+      <div class="kpi-sub">across filtered runs</div>
     </div>`;
 }
 
-function renderApmFullPanel(tool, m){
-  const container=document.getElementById('apm-main-card');
+// ── Charts ─────────────────────────────────────────────────────
+const GRID={color:'#1e2d45'},TICK={color:'#475569',font:{size:10},maxTicksLimit:8};
+const PLUG={legend:{display:false},tooltip:{titleColor:'#e2e8f0',bodyColor:'#94a3b8',backgroundColor:'#151d2e',borderColor:'#1e2d45',borderWidth:1}};
+function mkChart(id,type,data,opts={}){
+  const ctx=document.getElementById(id);if(!ctx)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,plugins:{...PLUG,...(opts.plugins||{})},
+    scales:type!=='doughnut'?{x:{ticks:{...TICK,maxRotation:45},grid:GRID},y:{ticks:TICK,grid:GRID}}:undefined,...(opts.extra||{})}});
+}
 
-  if(!tool || tool==='none'){
-    container.innerHTML=`<div class="apm-card"><div class="apm-none">
-      <div class="big-icon">⛔</div>
-      <h3>No APM Tool Configured</h3>
-      <p>When you run the workflow, select an APM tool from the <strong>apm_tool</strong> dropdown. Supported tools:</p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px">
-        ${Object.entries(TOOLS).filter(([k])=>k!=='none').map(([k,v])=>`<span style="padding:4px 12px;border-radius:20px;background:${v.bg};border:1px solid ${v.color}44;font-size:12px;font-weight:600">${v.icon} ${v.label}</span>`).join('')}
+function renderCharts(runs){
+  if(!runs.length)return;
+  const rev=[...runs].reverse(),lbl=rev.map(r=>'#'+r.run_id);
+  const rtData=rev.map(r=>Math.round(getRtValue(r,activePct)));
+  const slaMax=slaConfig.max_avg_rt||2000;
+
+  mkChart('chart-rt','line',{labels:lbl,datasets:[
+    {label:PCT_LABEL[activePct]+' RT',data:rtData,borderColor:'#3b82f6',backgroundColor:'#3b82f620',tension:.4,pointRadius:3,fill:true},
+    {label:'SLA',data:rev.map(()=>slaMax),borderColor:'#ef4444',borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
+  ]});
+  mkChart('chart-err','bar',{labels:lbl,datasets:[{label:'Error %',data:rev.map(r=>+r.error_rate.toFixed(3)),
+    backgroundColor:rev.map(r=>r.error_rate>(slaConfig.max_error_rate||1)?'#ef444488':'#3b82f666')}]});
+  const tphMin=slaConfig.min_tph||(slaConfig.min_tps||10)*3600;
+  mkChart('chart-tph','line',{labels:lbl,datasets:[
+    {label:'TPH',data:rev.map(r=>Math.round(r.tph||r.tps*3600)),borderColor:'#06b6d4',backgroundColor:'#06b6d420',tension:.4,pointRadius:3,fill:true},
+    {label:'Min',data:rev.map(()=>tphMin),borderColor:'#f59e0b',borderDash:[4,4],pointRadius:0,backgroundColor:'transparent'},
+  ]});
+  const passed=runs.filter(r=>r.sla_passed).length;
+  mkChart('chart-sla','doughnut',{labels:['Pass','Fail'],datasets:[{data:[passed,runs.length-passed],
+    backgroundColor:['#10b98180','#ef444460'],borderColor:['#10b981','#ef4444'],borderWidth:1}]},
+    {extra:{cutout:'65%'},plugins:{legend:{display:true,position:'bottom',labels:{color:'#64748b',font:{size:11}}}}});
+  const vuMap={};runs.forEach(r=>{const k=String(r.vusers||0);vuMap[k]=(vuMap[k]||0)+1;});
+  const vk=Object.keys(vuMap).sort((a,b)=>+a-+b);
+  mkChart('chart-vu','bar',{labels:vk.map(k=>k+' VU'),datasets:[{label:'Runs',data:vk.map(k=>vuMap[k]),backgroundColor:'#6366f166',borderColor:'#6366f1',borderWidth:1}]});
+}
+
+// ── Human-readable metrics table ───────────────────────────────
+function renderMetricsTable(){
+  const runs=metricRuns();
+  if(!runs.length){
+    document.getElementById('metrics-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No runs match filters</td></tr>';
+    return;
+  }
+
+  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length;
+  const slaMax=slaConfig.max_avg_rt||2000,errMax=slaConfig.max_error_rate||1;
+  const tphMin=slaConfig.min_tph||(slaConfig.min_tps||10)*3600;
+
+  const avgRt  =avg(runs.map(r=>r.avg_response_time||0));
+  const pctVal =avg(runs.map(r=>getRtValue(r,metricsActivePct)));
+  const p90Avg =avg(runs.map(r=>r.p90_response_time||0));
+  const p95Avg =avg(runs.map(r=>r.p95_response_time||0));
+  const p98Avg =avg(runs.map(r=>r.p98_response_time||r.p99_response_time||0));
+  const p99Avg =avg(runs.map(r=>r.p99_response_time||0));
+  const maxRt  =Math.max(...runs.map(r=>r.max_response_time||0));
+  const errRate=avg(runs.map(r=>r.error_rate||0));
+  const tph    =avg(runs.map(r=>r.tph||r.tps*3600));
+  const errCnt =runs.reduce((s,r)=>s+r.error_count,0);
+  const txTotal=runs.reduce((s,r)=>s+r.total_transactions,0);
+
+  document.getElementById('m-subtitle').textContent=`Showing average across ${runs.length} filtered run(s) · Selected percentile: ${PCT_LABEL[metricsActivePct]}`;
+
+  function statusPill(val,warnLimit,failLimit,lowerBetter=true){
+    let cls,txt;
+    if(lowerBetter){
+      if(val>failLimit){cls='pill-fail';txt='BREACH';}
+      else if(val>warnLimit){cls='pill-warn';txt='WARN';}
+      else{cls='pill-pass';txt='PASS';}
+    } else {
+      if(val<failLimit){cls='pill-fail';txt='BREACH';}
+      else if(val<warnLimit){cls='pill-warn';txt='WARN';}
+      else{cls='pill-pass';txt='PASS';}
+    }
+    return `<span class="status-pill ${cls}">${txt}</span>`;
+  }
+
+  function barCell(val,max,color){
+    const pct=Math.min((val/max)*100,100);
+    return `<div class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%;background:${color}"></div></div><span style="font-family:var(--mono);font-size:11px">${Math.round(val)}</span></div>`;
+  }
+
+  const highlight = metricsActivePct;
+  const rows=[
+    {label:'Average Response Time',  desc:'Mean response time across all transactions',      val:avgRt,  sla:slaMax,  warn:slaMax*.75, color:'var(--blue)',   unit:'ms', hi:highlight==='avg'},
+    {label:`${PCT_LABEL[metricsActivePct]} Response Time`,desc:`${metricsActivePct.toUpperCase()} of all response times — ${metricsActivePct==='p95'?'95% of requests were faster than this':metricsActivePct==='p99'?'99% of requests were faster than this':'see percentile definition'}`,
+                                                                                             val:pctVal, sla:slaMax*1.5,warn:slaMax*1.1, color:'var(--cyan)',   unit:'ms', hi:true},
+    {label:'P90 Response Time',      desc:'90% of requests completed within this time',      val:p90Avg, sla:slaMax*1.3,warn:slaMax,   color:'var(--green)',  unit:'ms', hi:highlight==='p90'},
+    {label:'P99 Response Time',      desc:'99% of requests completed within this time',      val:p99Avg, sla:slaMax*2.5,warn:slaMax*2, color:'var(--purple)', unit:'ms', hi:highlight==='p99'},
+    {label:'Max Response Time',      desc:'Slowest individual request recorded',             val:maxRt,  sla:slaMax*5,  warn:slaMax*3, color:'var(--amber)',  unit:'ms', hi:false},
+    {label:'Error Rate',             desc:'Percentage of failed transactions',               val:errRate,sla:errMax,  warn:errMax*.5,  color:'var(--red)',    unit:'%',  hi:false, lower:true, decimals:3},
+    {label:'Throughput',             desc:'Transactions processed per hour',                 val:tph,    sla:tphMin*.75,warn:tphMin,   color:'var(--orange)', unit:'TPH',hi:false, lower:false},
+    {label:'Total Transactions',     desc:'Total successful + failed transactions',           val:txTotal,sla:null,    warn:null,       color:'var(--muted)',  unit:'',   hi:false, noSla:true},
+    {label:'Total Errors',           desc:'Count of failed transactions',                    val:errCnt, sla:null,    warn:null,       color:'var(--red)',    unit:'',   hi:false, noSla:true},
+  ];
+
+  const maxRtForBar=Math.max(maxRt,slaMax)*1.2;
+
+  document.getElementById('metrics-tbody').innerHTML=rows.map(row=>`
+    <tr style="${row.hi?'background:rgba(59,130,246,.05);':''}">
+      <td class="label-col" style="${row.hi?'color:var(--blue);font-weight:700;':''}">${row.label}${row.hi?' ◀':''}</td>
+      <td class="desc-col">${row.desc}</td>
+      <td class="num" style="color:${row.color};font-weight:700">${row.decimals?row.val.toFixed(row.decimals):Math.round(row.val)} ${row.unit}</td>
+      <td class="num" style="color:var(--muted)">${row.noSla?'—':(row.lower===false?`≥ ${Math.round(row.sla)} ${row.unit}`:`≤ ${Math.round(row.sla)} ${row.unit}`)}</td>
+      <td>${row.noSla?'<span class="status-pill pill-pass">INFO</span>':statusPill(row.val,row.warn,row.sla,row.lower!==false)}</td>
+      <td>${row.unit==='TPH'?barCell(row.val,Math.max(tph*1.5,tphMin*2),'var(--orange)'):row.unit==='%'?barCell(row.val,5,'var(--red)'):row.unit===''?'—':barCell(row.val,maxRtForBar,row.color)}</td>
+    </tr>`).join('');
+
+  // Per-run percentile breakdown
+  const ft=iso=>new Date(iso).toISOString().replace('T',' ').slice(0,16);
+  document.getElementById('pct-tbody').innerHTML=runs.map(r=>`
+    <tr onclick="openModal(${r.run_id})" style="cursor:pointer">
+      <td>#${r.run_id}</td>
+      <td>${ft(r.timestamp)}</td>
+      <td><span class="bp bp-${r.protocol.toLowerCase()}">${r.protocol}</span></td>
+      <td>${r.scenario}</td>
+      <td>${Math.round(r.avg_response_time||0)}</td>
+      <td>${Math.round(r.p50_response_time||r.avg_response_time||0)}</td>
+      <td>${Math.round(r.p75_response_time||r.p90_response_time||0)}</td>
+      <td>${Math.round(r.p90_response_time||0)}</td>
+      <td class="${metricsActivePct==='p95'?'pct-highlight':''}">${Math.round(r.p95_response_time||0)}</td>
+      <td class="${metricsActivePct==='p98'?'pct-highlight':''}">${Math.round(r.p98_response_time||r.p99_response_time||0)}</td>
+      <td class="${metricsActivePct==='p99'?'pct-highlight':''}">${Math.round(r.p99_response_time||0)}</td>
+      <td>${Math.round(r.max_response_time||0)}</td>
+      <td style="${r.error_rate>(slaConfig.max_error_rate||1)?'color:var(--red)':''}">${r.error_rate.toFixed(3)}%</td>
+      <td>${Math.round(r.tph||r.tps*3600)}</td>
+      <td><span class="bp ${r.sla_passed?'bp-pass':'bp-fail'}">${r.sla_passed?'PASS':'FAIL'}</span></td>
+    </tr>`).join('');
+}
+
+// ── Run history table ──────────────────────────────────────────
+function sortRuns(key){
+  if(sortKey===key) sortAsc=!sortAsc; else{sortKey=key;sortAsc=false;}
+  document.querySelectorAll('table.runs th').forEach(th=>{
+    th.classList.remove('sorted');
+    if(th.getAttribute('onclick')===`sortRuns('${key}')`) th.classList.add('sorted');
+  });
+  renderRunTable();
+}
+
+function renderRunTable(){
+  const runs=runTableRuns();
+  const df2=document.getElementById('r-date-from').value;
+  const dt2=document.getElementById('r-date-to').value;
+  const dateCtx=df2||dt2?` · ${df2||'start'} → ${dt2||'today'}`:'';
+  document.getElementById('run-count').textContent=`${runs.length} run${runs.length!==1?'s':''} found${dateCtx}`;
+  const ft=iso=>new Date(iso).toISOString().replace('T',' ').slice(0,16);
+  const tbody=document.getElementById('run-tbody');
+  if(!runs.length){
+    // Show helpful message with date range context
+    const df=document.getElementById('r-date-from').value;
+    const dt=document.getElementById('r-date-to').value;
+    const rid=document.getElementById('r-runid').value;
+    let hint='No runs match the current filters.';
+    if(df||dt) hint+=` No runs found between ${df||'start'} and ${dt||'today'}.`;
+    if(rid)    hint+=` Run ID "${rid}" not found.`;
+    hint+=' Try <a href="#" onclick="clearDateFilter();return false" style="color:var(--blue)">clearing filters</a> or using a quick-jump button.';
+    tbody.innerHTML=`<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:28px;font-family:var(--font)">${hint}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=runs.map(r=>`
+    <tr onclick="openModal(${r.run_id})">
+      <td>#${r.run_id}</td>
+      <td>${ft(r.timestamp)}</td>
+      <td><span class="bp bp-${r.protocol.toLowerCase()}">${r.protocol}</span></td>
+      <td>${r.scenario}</td>
+      <td class="env-${r.environment}">${r.environment}</td>
+      <td>${r.vusers||'—'}</td>
+      <td style="${r.avg_response_time>(slaConfig.max_avg_rt||2000)?'color:var(--red)':''}">${Math.round(r.avg_response_time)}ms</td>
+      <td>${Math.round(r.p90_response_time||0)}ms</td>
+      <td>${Math.round(r.p95_response_time||0)}ms</td>
+      <td>${Math.round(r.p99_response_time||0)}ms</td>
+      <td style="${r.error_rate>(slaConfig.max_error_rate||1)?'color:var(--red)':''}">${r.error_rate.toFixed(3)}%</td>
+      <td>${Math.round(r.tph||r.tps*3600)}</td>
+      <td><span class="bp ${r.sla_passed?'bp-pass':'bp-fail'}">${r.sla_passed?'PASS':'FAIL'}</span></td>
+    </tr>`).join('');
+}
+
+// ── Run detail modal ───────────────────────────────────────────
+function openModal(runId){
+  const r=allRuns.find(x=>+x.run_id===+runId);
+  if(!r)return;
+  const ft=iso=>new Date(iso).toISOString().replace('T',' ').slice(0,16);
+  document.getElementById('modal-title').textContent=`Run #${r.run_id} — ${r.scenario} · ${r.environment} · ${r.protocol}`;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-section">
+      <div class="modal-section-title">Response Time Percentiles</div>
+      <div class="modal-kpis">
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--blue)">${Math.round(r.avg_response_time||0)}</div><div class="modal-kpi-lbl">Avg (ms)</div></div>
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--cyan)">${Math.round(r.p50_response_time||r.avg_response_time||0)}</div><div class="modal-kpi-lbl">P50 (ms)</div></div>
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--green)">${Math.round(r.p75_response_time||r.p90_response_time||0)}</div><div class="modal-kpi-lbl">P75 (ms)</div></div>
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--amber)">${Math.round(r.p90_response_time||0)}</div><div class="modal-kpi-lbl">P90 (ms)</div></div>
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--blue);font-size:24px">${Math.round(r.p95_response_time||0)}</div><div class="modal-kpi-lbl">P95 (ms)</div></div>
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--purple)">${Math.round(r.p98_response_time||r.p99_response_time||0)}</div><div class="modal-kpi-lbl">P98 (ms)</div></div>
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--red)">${Math.round(r.p99_response_time||0)}</div><div class="modal-kpi-lbl">P99 (ms)</div></div>
+        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--red)">${Math.round(r.max_response_time||0)}</div><div class="modal-kpi-lbl">Max (ms)</div></div>
       </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">Run Configuration & Results</div>
+      <div class="detail-grid">
+        <div class="detail-row"><span class="detail-key">Timestamp</span><span class="detail-val">${ft(r.timestamp)} UTC</span></div>
+        <div class="detail-row"><span class="detail-key">Protocol</span><span class="detail-val">${r.protocol}</span></div>
+        <div class="detail-row"><span class="detail-key">Scenario</span><span class="detail-val">${r.scenario}</span></div>
+        <div class="detail-row"><span class="detail-key">Environment</span><span class="detail-val">${r.environment}</span></div>
+        <div class="detail-row"><span class="detail-key">VUsers</span><span class="detail-val">${r.vusers||'—'}</span></div>
+        <div class="detail-row"><span class="detail-key">Total Transactions</span><span class="detail-val">${(r.total_transactions||0).toLocaleString()}</span></div>
+        <div class="detail-row"><span class="detail-key">Error Count</span><span class="detail-val">${r.error_count||0}</span></div>
+        <div class="detail-row"><span class="detail-key">Error Rate</span><span class="detail-val" style="${r.error_rate>(slaConfig.max_error_rate||1)?'color:var(--red)':''}">${r.error_rate.toFixed(3)}%</span></div>
+        <div class="detail-row"><span class="detail-key">Throughput</span><span class="detail-val">${Math.round(r.tph||r.tps*3600)} TPH</span></div>
+        <div class="detail-row"><span class="detail-key">SLA Result</span><span class="detail-val" style="${r.sla_passed?'color:var(--green)':'color:var(--red)'}">${r.sla_passed?'✅ PASS':'❌ FAIL'}</span></div>
+        ${r.apm_tool?`<div class="detail-row"><span class="detail-key">APM Tool</span><span class="detail-val">${r.apm_tool}</span></div>`:''}
+      </div>
+    </div>`;
+  document.getElementById('run-modal').classList.add('open');
+}
+
+function closeModal(e){if(e.target===document.getElementById('run-modal'))document.getElementById('run-modal').classList.remove('open');}
+
+// ── APM rendering ──────────────────────────────────────────────
+function normalise(m){
+  if(!m||m.error)return null;
+  return{
+    rt:m.response_time_p95_ms??m.avg_response_time_ms??m.avg_response_time??0,
+    rtLbl:m.response_time_p95_ms!=null?'P95 RT (ms)':'Avg RT (ms)',
+    err:m.error_rate_pct??m.service_error_rate??m.error_rate??0,
+    tput:m.throughput_rpm??m.throughput_rps??m.calls_per_min??m.throughput_tps??0,
+    tputLbl:m.throughput_rps!=null?'rps':m.calls_per_min!=null?'calls/min':'TPH',
+    issues:m.open_problems??m.open_alerts??m.open_violations??0,
+    issuesLbl:m.open_problems!=null?'Problems':m.open_alerts!=null?'Alerts':'Violations',
+    cpu:m.cpu_usage_pct??m.cpu_busy_pct??null,
+    mem:m.memory_usage_pct??m.heap_used_mb??null,
+    memLbl:m.memory_usage_pct!=null?'Mem %':'Heap (MB)',
+    lrRt:m.lr_avg_rt_trend??[],lrErr:m.lr_error_rate_trend??[],lrTps:m.lr_tps_trend??[],
+    url:m.dashboard_url??'#',fetchedAt:m.fetched_at??'',
+  };
+}
+
+function renderApmOverview(tool,m){
+  const el=document.getElementById('ov-apm-summary'),tn=document.getElementById('ov-tool-name');
+  const cfg=TOOLS[tool];
+  if(!tool||tool==='none'){
+    tn.textContent='None — set in configs/project.json';tn.style.color='var(--muted)';
+    el.innerHTML=`<div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:28px;text-align:center;color:var(--muted)">
+      <div style="font-size:28px;margin-bottom:8px">⛔</div>
+      <div style="font-weight:600;color:var(--text);margin-bottom:4px">No APM tool configured</div>
+      <div style="font-size:12px">Edit <code>configs/project.json</code> → set <code>"tool"</code> to one of: ${Object.keys(TOOLS).join(', ')}</div></div>`;
+    return;
+  }
+  tn.textContent=cfg?`${cfg.icon} ${cfg.label}`:`${tool}`;tn.style.color=cfg?.color||'var(--blue)';
+  const n=normalise(m);
+  if(!n){el.innerHTML=`<div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:28px;text-align:center;color:var(--muted)"><div style="font-size:28px">${cfg?.icon||'⚠️'}</div><div style="margin-top:8px;font-weight:600;color:var(--text)">${cfg?.label||tool} — No data</div><div style="font-size:12px;margin-top:4px">Check secrets in SECRETS_SETUP.md</div></div>`;return;}
+  const ec=n.err>1?'var(--red)':n.err>.5?'var(--amber)':'var(--green)';
+  const ic=n.issues>0?'var(--red)':'var(--green)';
+  el.innerHTML=`<div style="background:var(--s1);border:1px solid ${cfg.color}44;border-radius:10px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--s2)">
+      <div style="width:32px;height:32px;border-radius:8px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:16px">${cfg.icon}</div>
+      <div><div style="font-size:13px;font-weight:700">${cfg.label}</div><div style="font-size:11px;color:var(--muted)">Last 1h</div></div>
+      <span style="margin-left:auto;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.3)">LIVE</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)">
+      <div style="background:var(--s2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${cfg.color}">${Math.round(n.rt)}</div><div style="font-size:10px;color:var(--muted);margin-top:3px">${n.rtLbl}</div></div>
+      <div style="background:var(--s2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${ec}">${n.err.toFixed(3)}%</div><div style="font-size:10px;color:var(--muted);margin-top:3px">Error Rate</div></div>
+      <div style="background:var(--s2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--cyan)">${Math.round(n.tput)}</div><div style="font-size:10px;color:var(--muted);margin-top:3px">${n.tputLbl}</div></div>
+      <div style="background:var(--s2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;font-family:var(--mono);color:${ic}">${n.issues}</div><div style="font-size:10px;color:var(--muted);margin-top:3px">${n.issuesLbl}</div></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px">
+      <span style="font-size:11px;color:var(--muted)">Fetched ${n.fetchedAt?new Date(n.fetchedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':'—'}</span>
+      <a href="#" onclick="showSection('apm');return false" style="font-size:12px;color:${cfg.color};text-decoration:none;padding:4px 10px;border:1px solid ${cfg.color}44;border-radius:6px;background:var(--s2)">Full panel →</a>
+    </div></div>`;
+}
+
+function renderApmFullPanel(tool,m){
+  const el=document.getElementById('apm-main-card');
+  const cfg=TOOLS[tool];
+  if(!tool||tool==='none'){
+    el.innerHTML=`<div class="apm-card"><div class="apm-none-msg">
+      <div style="font-size:40px;opacity:.35">⛔</div>
+      <div style="font-weight:600;font-size:15px;color:var(--text)">No APM Tool Configured</div>
+      <div style="font-size:12px">Set <code>apm.tool</code> in <code>configs/project.json</code></div>
+      <div class="tool-pills">${Object.entries(TOOLS).map(([k,v])=>`<span class="tool-pill" style="background:${v.bg};border-color:${v.color}44;color:${v.color}">${v.icon} ${v.label}</span>`).join('')}</div>
     </div></div>`;
     return;
   }
-
-  const cfg=TOOLS[tool]||TOOLS.none;
-
-  if(!m || m.error){
-    container.innerHTML=`<div class="apm-card">
-      <div class="apm-header" style="border-left:3px solid ${cfg.color}">
-        <div class="apm-icon" style="background:${cfg.bg}">${cfg.icon}</div>
-        <div class="apm-title-block"><h2>${cfg.label}</h2><p>Metrics unavailable</p></div>
-        <span class="apm-badge nodata">NO DATA</span>
-      </div>
-      <div class="apm-none"><div class="big-icon">${cfg.icon}</div>
-        <h3>${cfg.label} credentials not configured</h3>
-        <p>Add the required secrets for ${cfg.label} in <strong>Settings → Secrets and variables → Actions</strong>. See <code>docs/SECRETS_SETUP.md</code> for the exact secret names.</p>
-      </div></div>`;
-    return;
-  }
-
-  const n=normalise(m,tool);
-  if(!n){ container.innerHTML=''; return; }
-
-  const errColor=n.err>1?'var(--red)':n.err>0.5?'var(--amber)':'var(--green)';
-  const issColor=n.issues>0?'var(--red)':'var(--green)';
-  const hrs=n.lrRt.length ? Array.from({length:n.lrRt.length},(_,i)=>`-${n.lrRt.length-i}h`) : [];
-
-  container.innerHTML=`
-  <div class="apm-card" style="border-color:${cfg.color}44">
-    <div class="apm-header">
+  const n=normalise(m);
+  if(!n){el.innerHTML=`<div class="apm-card"><div class="apm-none-msg"><div style="font-size:36px">${cfg?.icon||'⚠️'}</div><div style="font-weight:600;color:var(--text)">${cfg?.label||tool} — No data</div><div style="font-size:12px">Check required secrets in docs/SECRETS_SETUP.md</div></div></div>`;return;}
+  const hrs=n.lrRt.length?Array.from({length:n.lrRt.length},(_,i)=>`-${n.lrRt.length-i}h`):[];
+  const ec=n.err>1?'var(--red)':n.err>.5?'var(--amber)':'var(--green)';
+  el.innerHTML=`<div class="apm-card" style="border-color:${cfg.color}44">
+    <div class="apm-hdr">
       <div class="apm-icon" style="background:${cfg.bg}">${cfg.icon}</div>
-      <div class="apm-title-block"><h2 style="color:${cfg.color}">${cfg.label}</h2><p>Live metrics — last 24h trend | 1h snapshot</p></div>
-      <span class="apm-badge live">LIVE</span>
+      <div><div style="font-size:14px;font-weight:700;color:${cfg.color}">${cfg.label}</div><div style="font-size:11px;color:var(--muted)">Live metrics · 24h trend</div></div>
+      <span class="apm-badge apm-live">LIVE</span>
     </div>
-
-    <div class="apm-kpis">
-      <div class="apm-kpi"><div class="apm-kpi-val" style="color:${cfg.color}">${Math.round(n.rt)}</div><div class="apm-kpi-lbl">${n.rtLbl}</div></div>
-      <div class="apm-kpi"><div class="apm-kpi-val" style="color:${errColor}">${n.err.toFixed(3)}%</div><div class="apm-kpi-lbl">Error Rate</div></div>
-      <div class="apm-kpi"><div class="apm-kpi-val" style="color:var(--cyan)">${Math.round(n.tput)}</div><div class="apm-kpi-lbl">${n.tputLbl}</div></div>
-      <div class="apm-kpi"><div class="apm-kpi-val" style="color:${issColor}">${n.issues}</div><div class="apm-kpi-lbl">${n.issuesLbl}</div></div>
-      ${n.cpu!=null?`<div class="apm-kpi"><div class="apm-kpi-val" style="color:var(--blue)">${n.cpu}%</div><div class="apm-kpi-lbl">CPU</div></div>`:''}
-      ${n.mem!=null?`<div class="apm-kpi"><div class="apm-kpi-val" style="color:var(--purple)">${Math.round(n.mem)}</div><div class="apm-kpi-lbl">${n.memLbl}</div></div>`:''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)">
+      <div class="modal-kpi"><div class="modal-kpi-val" style="color:${cfg.color}">${Math.round(n.rt)}</div><div class="modal-kpi-lbl">${n.rtLbl}</div></div>
+      <div class="modal-kpi"><div class="modal-kpi-val" style="color:${ec}">${n.err.toFixed(3)}%</div><div class="modal-kpi-lbl">Error Rate</div></div>
+      <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--cyan)">${Math.round(n.tput)}</div><div class="modal-kpi-lbl">${n.tputLbl}</div></div>
+      <div class="modal-kpi"><div class="modal-kpi-val" style="color:${n.issues>0?'var(--red)':'var(--green)'}">${n.issues}</div><div class="modal-kpi-lbl">${n.issuesLbl}</div></div>
+      ${n.cpu!=null?`<div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--blue)">${n.cpu}%</div><div class="modal-kpi-lbl">CPU</div></div>`:''}
+      ${n.mem!=null?`<div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--purple)">${Math.round(n.mem)}</div><div class="modal-kpi-lbl">${n.memLbl}</div></div>`:''}
     </div>
-
-    <div class="apm-charts">
-      <div class="apm-chart-card wide"><div class="apm-chart-title">LR Avg Response Time → ${cfg.label} · 24h</div><div class="apm-chart-wrap tall"><canvas id="apm-rt-chart"></canvas></div></div>
-      <div class="apm-chart-card"><div class="apm-chart-title">LR Error Rate · 24h</div><div class="apm-chart-wrap"><canvas id="apm-err-chart"></canvas></div></div>
-      <div class="apm-chart-card"><div class="apm-chart-title">LR Throughput (TPS) · 24h</div><div class="apm-chart-wrap"><canvas id="apm-tps-chart"></canvas></div></div>
+    <div class="charts-grid" style="padding:14px 18px">
+      <div class="chart-card wide" style="background:var(--s2)"><div class="chart-hdr"><div class="chart-title">LR Avg RT → ${cfg.label} · 24h <span class="tag">ms</span></div></div><div class="chart-wrap tall"><canvas id="apm-rt-c"></canvas></div></div>
+      <div class="chart-card" style="background:var(--s2)"><div class="chart-hdr"><div class="chart-title">LR Error Rate <span class="tag">%</span></div></div><div class="chart-wrap"><canvas id="apm-err-c"></canvas></div></div>
+      <div class="chart-card" style="background:var(--s2)"><div class="chart-hdr"><div class="chart-title">LR Throughput <span class="tag">TPH</span></div></div><div class="chart-wrap"><canvas id="apm-tps-c"></canvas></div></div>
     </div>
-
-    <div class="apm-footer">
-      <span class="apm-updated">Fetched ${n.fetchedAt?new Date(n.fetchedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':'—'}</span>
-      <a class="apm-ext-link" href="${n.url}" target="_blank" style="color:${cfg.color};border-color:${cfg.color}44">${cfg.icon} Open ${cfg.label} Console ↗</a>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--muted)">Fetched ${n.fetchedAt?new Date(n.fetchedAt).toISOString().replace('T',' ').slice(0,16)+' UTC':'—'}</span>
+      <a href="${n.url}" target="_blank" style="font-size:12px;color:${cfg.color};text-decoration:none;padding:5px 12px;border:1px solid ${cfg.color}44;border-radius:6px;background:var(--s2)">${cfg.icon} Open ${cfg.label} ↗</a>
     </div>
   </div>`;
-
-  // Render charts after DOM is updated
   requestAnimationFrame(()=>{
-    if(n.lrRt.length) mkLine('apm-rt-chart',hrs,[{label:'LR Avg RT',data:n.lrRt,borderColor:cfg.color,backgroundColor:cfg.color+'20',tension:.4,pointRadius:2,fill:true}]);
-    if(n.lrErr.length) mkBar('apm-err-chart',hrs,n.lrErr,'#ef444466');
-    if(n.lrTps.length) mkLine('apm-tps-chart',hrs,[{label:'TPS',data:n.lrTps,borderColor:'#10b981',backgroundColor:'#10b98120',tension:.4,pointRadius:2,fill:true}]);
+    if(n.lrRt.length) mkChart('apm-rt-c','line',{labels:hrs,datasets:[{label:'Avg RT',data:n.lrRt,borderColor:cfg.color,backgroundColor:cfg.color+'20',tension:.4,pointRadius:2,fill:true}]});
+    if(n.lrErr.length) mkChart('apm-err-c','bar',{labels:hrs,datasets:[{label:'Error%',data:n.lrErr,backgroundColor:'#ef444466'}]});
+    if(n.lrTps.length) mkChart('apm-tps-c','line',{labels:hrs,datasets:[{label:'TPS',data:n.lrTps,borderColor:'#10b981',backgroundColor:'#10b98120',tension:.4,pointRadius:2,fill:true}]});
   });
 }
 
-// ── Main render ──────────────────────────────────────────────────────────────
-function applyFilters(){
-  const runs=filteredRuns();
-  renderStats(runs);
-  renderLrCharts(runs);
-  renderTable(runs);
-}
-
 function renderApm(){
-  const tool = apmData?.selected_tool || 'none';
-  const metrics = apmData?.metrics || null;
-  renderToolButtons(tool);
-  renderApmOverviewCard(tool, metrics);
-  renderApmFullPanel(tool, metrics);
+  const tool=apmData?.selected_tool||'none',m=apmData?.metrics||null;
+  const cfg=tool!=='none'?TOOLS[tool]:null;
+  const el=document.getElementById('tool-buttons');
+  el.innerHTML=cfg?`<span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Active tool:</span>
+    <span style="display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;border:1px solid ${cfg.color};background:${cfg.bg};color:${cfg.color};font-size:12px;font-weight:600">${cfg.icon} ${cfg.label}</span>`:
+    `<span style="font-size:12px;color:var(--muted)">No APM tool selected — set in configs/project.json</span>`;
+  document.getElementById('tab-apm').textContent=cfg?`${cfg.icon} ${cfg.label}`:'APM';
+  renderApmOverview(tool,m);
+  renderApmFullPanel(tool,m);
 }
 
+// ── CSV / Excel export ─────────────────────────────────────────
+function runsToRows(runs){
+  return runs.map(r=>({
+    'Run ID':           r.run_id,
+    'Timestamp (UTC)':  new Date(r.timestamp).toISOString().replace('T',' ').slice(0,16),
+    'Protocol':         r.protocol,
+    'Scenario':         r.scenario,
+    'Environment':      r.environment,
+    'VUsers':           r.vusers||0,
+    'Avg RT (ms)':      Math.round(r.avg_response_time||0),
+    'P50 RT (ms)':      Math.round(r.p50_response_time||r.avg_response_time||0),
+    'P75 RT (ms)':      Math.round(r.p75_response_time||r.p90_response_time||0),
+    'P90 RT (ms)':      Math.round(r.p90_response_time||0),
+    'P95 RT (ms)':      Math.round(r.p95_response_time||0),
+    'P98 RT (ms)':      Math.round(r.p98_response_time||r.p99_response_time||0),
+    'P99 RT (ms)':      Math.round(r.p99_response_time||0),
+    'Max RT (ms)':      Math.round(r.max_response_time||0),
+    'Error Count':      r.error_count||0,
+    'Error Rate (%)':   +r.error_rate.toFixed(3),
+    'Total Transactions':r.total_transactions||0,
+    'Throughput (TPH)': Math.round(r.tph||r.tps*3600),
+    'SLA Passed':       r.sla_passed?'PASS':'FAIL',
+    'APM Tool':         r.apm_tool||'—',
+  }));
+}
+
+function toCSV(rows){
+  if(!rows.length)return'';
+  const hdrs=Object.keys(rows[0]);
+  const esc=v=>typeof v==='string'&&(v.includes(',')||v.includes('"'))?`"${v.replace(/"/g,'""')}"`:v;
+  return[hdrs.join(','),...rows.map(r=>hdrs.map(h=>esc(r[h])).join(','))].join('\n');
+}
+
+function downloadCSV(csv,filename){
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=filename;a.click();
+}
+
+function downloadExcel(rows,filename){
+  const ws=XLSX.utils.json_to_sheet(rows);
+  // Auto-width columns
+  const cols=Object.keys(rows[0]||{}).map(k=>({wch:Math.max(k.length,10)}));
+  ws['!cols']=cols;
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Performance Data');
+  XLSX.writeFile(wb,filename);
+}
+
+function stamp(){return new Date().toISOString().slice(0,10);}
+
+function exportCSV(){
+  const rows=runsToRows(filteredRuns());
+  downloadCSV(toCSV(rows),`hermes-perf-${stamp()}.csv`);
+}
+function exportExcel(){
+  downloadExcel(runsToRows(filteredRuns()),`hermes-perf-${stamp()}.xlsx`);
+}
+function exportMetricsCSV(){
+  const rows=runsToRows(metricRuns());
+  downloadCSV(toCSV(rows),`hermes-metrics-${stamp()}.csv`);
+}
+function exportMetricsExcel(){
+  downloadExcel(runsToRows(metricRuns()),`hermes-metrics-${stamp()}.xlsx`);
+}
+function exportRunsCSV(){
+  const rows=runsToRows(runTableRuns());
+  downloadCSV(toCSV(rows),`hermes-runs-${stamp()}.csv`);
+}
+function exportRunsExcel(){
+  downloadExcel(runsToRows(runTableRuns()),`hermes-runs-${stamp()}.xlsx`);
+}
+
+// ── Main ───────────────────────────────────────────────────────
 async function init(){
   try{
     await loadAll();
     const latest=allRuns[0];
     document.getElementById('last-updated').textContent=latest
       ?new Date(latest.timestamp).toISOString().replace('T',' ').slice(0,16)+' UTC':'No data';
-    applyFilters();
-    renderApm();
+    const runs=filteredRuns();
+    renderKPIs(runs);renderCharts(runs);renderApm();
   }catch(e){console.error(e);}
-  finally{ document.getElementById('loading').classList.add('gone'); }
+  finally{document.getElementById('loading').classList.add('gone');}
 }
 
 async function hardRefresh(){
   document.getElementById('last-updated').textContent='Refreshing…';
   await loadAll();
-  applyFilters();
-  renderApm();
-  const latest=allRuns[0];
-  document.getElementById('last-updated').textContent=latest
-    ?new Date(latest.timestamp).toISOString().replace('T',' ').slice(0,16)+' UTC':'No data';
+  const runs=filteredRuns();renderKPIs(runs);renderCharts(runs);renderApm();
+  document.getElementById('last-updated').textContent=
+    allRuns[0]?new Date(allRuns[0].timestamp).toISOString().replace('T',' ').slice(0,16)+' UTC':'No data';
 }
 
 init();
-setInterval(hardRefresh, 5*60*1000);
+setInterval(hardRefresh,5*60*1000);
 </script>
 </body>
 </html>
