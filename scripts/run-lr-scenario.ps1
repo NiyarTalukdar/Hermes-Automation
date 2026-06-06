@@ -132,8 +132,11 @@ if (Test-Path $csvFile) {
             $sorted = $times | Sort-Object
             $summary.avg_response_time  = [Math]::Round(($times | Measure-Object -Average).Average, 2)
             $summary.max_response_time  = ($times | Measure-Object -Maximum).Maximum
+            $summary.p50_response_time  = $sorted[[Math]::Floor($sorted.Count * 0.50)]
+            $summary.p75_response_time  = $sorted[[Math]::Floor($sorted.Count * 0.75)]
             $summary.p90_response_time  = $sorted[[Math]::Floor($sorted.Count * 0.90)]
             $summary.p95_response_time  = $sorted[[Math]::Floor($sorted.Count * 0.95)]
+            $summary.p98_response_time  = $sorted[[Math]::Floor($sorted.Count * 0.98)]
             $summary.p99_response_time  = $sorted[[Math]::Floor($sorted.Count * 0.99)]
         }
         $summary.error_count       = ($errors | Measure-Object -Sum).Sum ?? 0
