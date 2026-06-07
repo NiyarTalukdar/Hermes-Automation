@@ -166,6 +166,41 @@ table.runs tr:hover td{background:var(--s2);cursor:pointer}
 .spinner{width:34px;height:34px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+
+/* ── AI Analysis Panel ───────────────────────────────── */
+.ai-panel{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.ai-panel-header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--s2)}
+.ai-panel-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ai-panel-title{font-size:13px;font-weight:700}
+.ai-panel-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.ai-scope-bar{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ai-scope-btn{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.ai-scope-btn:hover{border-color:var(--border2);color:var(--text)}
+.ai-scope-btn.active{background:rgba(99,102,241,.15);border-color:#6366f1;color:#a5b4fc}
+.ai-body{padding:16px 18px}
+.ai-prompt-row{display:flex;gap:8px;margin-bottom:12px}
+.ai-input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;outline:none;font-family:var(--font);resize:none}
+.ai-input:focus{border-color:#6366f1}
+.ai-run-btn{background:linear-gradient(135deg,#6366f1,#06b6d4);border:none;border-radius:8px;color:#fff;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .2s}
+.ai-run-btn:hover{opacity:.85}
+.ai-run-btn:disabled{opacity:.4;cursor:not-allowed}
+.ai-quick-prompts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.ai-quick-btn{padding:4px 11px;border-radius:6px;border:1px solid var(--border2);background:var(--s3);color:var(--muted);font-size:11px;cursor:pointer;transition:all .15s}
+.ai-quick-btn:hover{color:var(--text);border-color:#6366f1}
+.ai-response{background:var(--s2);border-radius:8px;padding:14px 16px;min-height:80px;font-size:13px;line-height:1.7;color:var(--text);border:1px solid var(--border)}
+.ai-response.loading{color:var(--muted);font-style:italic}
+.ai-response.error{color:var(--red);border-color:rgba(239,68,68,.3)}
+.ai-response h3{font-size:13px;font-weight:700;margin:12px 0 6px;color:var(--blue)}
+.ai-response h3:first-child{margin-top:0}
+.ai-response ul{padding-left:18px;margin:4px 0}
+.ai-response li{margin:3px 0}
+.ai-response strong{color:var(--amber)}
+.ai-response code{background:var(--s3);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:12px}
+.ai-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--border)}
+.ai-tokens{font-size:10px;color:var(--muted)}
+.ai-copy-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:11px;cursor:pointer}
+.ai-copy-btn:hover{color:var(--text)}
+
 footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-top:1px solid var(--border)}
 @media(max-width:800px){.charts-grid{grid-template-columns:1fr}.chart-card.wide{grid-column:1}main{padding:14px}header{padding:0 14px}.header-tabs .tab{padding:5px 8px;font-size:11px}.detail-grid{grid-template-columns:1fr}}
 </style>
@@ -180,6 +215,7 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-t
     <button class="tab" onclick="showSection('metrics')">📋 Metrics</button>
     <button class="tab" id="tab-apm" onclick="showSection('apm')">APM</button>
     <button class="tab" onclick="showSection('runs')">Run History</button>
+    <button class="tab" onclick="showSection('ai')">🤖 AI Analysis</button>
   </div>
   <div class="hdr-right">
     <span class="live-pill"><span class="live-dot"></span><span id="last-updated">Loading…</span></span>
@@ -216,10 +252,8 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-t
   <div class="pct-bar">
     <span>Response Time Percentile:</span>
     <button class="pct-btn" data-pct="avg"  onclick="setPct(this)">Avg</button>
-    <button class="pct-btn" data-pct="p50"  onclick="setPct(this)">P50</button>
-    <button class="pct-btn" data-pct="p75"  onclick="setPct(this)">P75</button>
     <button class="pct-btn active" data-pct="p90" onclick="setPct(this)">P90</button>
-    <button class="pct-btn" data-pct="p95"  onclick="setPct(this)">P95</button>
+    <button class="pct-btn" data-pct="p95" onclick="setPct(this)">P95</button>
     <button class="pct-btn" data-pct="p98"  onclick="setPct(this)">P98</button>
     <button class="pct-btn" data-pct="p99"  onclick="setPct(this)">P99</button>
     <span id="pct-sla-note" style="font-size:11px;color:var(--muted);margin-left:8px"></span>
@@ -273,10 +307,8 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-t
   <div class="pct-bar">
     <span>Response Time View:</span>
     <button class="pct-btn" data-pct="avg"  onclick="setMetricsPct(this)">Avg</button>
-    <button class="pct-btn" data-pct="p50"  onclick="setMetricsPct(this)">P50</button>
-    <button class="pct-btn" data-pct="p75"  onclick="setMetricsPct(this)">P75</button>
-    <button class="pct-btn active" data-pct="p90" onclick="setMetricsPct(this)">P90</button>
-    <button class="pct-btn" data-pct="p95"  onclick="setMetricsPct(this)">P95</button>
+    <button class="pct-btn active" data-pct="p90"  onclick="setMetricsPct(this)">P90</button>
+    <button class="pct-btn" data-pct="p95" onclick="setMetricsPct(this)">P95</button>
     <button class="pct-btn" data-pct="p98"  onclick="setMetricsPct(this)">P98</button>
     <button class="pct-btn" data-pct="p99"  onclick="setMetricsPct(this)">P99</button>
   </div>
@@ -323,10 +355,8 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-t
             <th>Protocol</th>
             <th>Scenario</th>
             <th>Avg RT</th>
-            <th>P50</th>
-            <th>P75</th>
-            <th class="pct-highlight">P90</th>
-            <th>P95</th>
+            <th>P90</th>
+            <th class="pct-highlight">P95</th>
             <th>P98</th>
             <th>P99</th>
             <th>Max</th>
@@ -431,6 +461,69 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-t
   </div>
 </div>
 
+<!-- ══════════════════════ AI ANALYSIS ══════════════════════ -->
+<div id="sec-ai" class="section">
+  <div class="sec-lbl">🤖 AI Performance Analysis — powered by Claude</div>
+
+  <div class="ai-panel">
+    <div class="ai-panel-header">
+      <div class="ai-panel-icon">🤖</div>
+      <div>
+        <div class="ai-panel-title">Intelligent Performance Analyst</div>
+        <div class="ai-panel-sub">Ask Claude to analyse your LoadRunner results, identify bottlenecks, and suggest optimisations</div>
+      </div>
+      <span id="ai-status" style="margin-left:auto;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:rgba(99,102,241,.12);color:#a5b4fc;border:1px solid rgba(99,102,241,.3)">READY</span>
+    </div>
+
+    <!-- Scope selector -->
+    <div class="ai-scope-bar">
+      <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Analyse:</span>
+      <button class="ai-scope-btn active" data-scope="latest" onclick="setAiScope(this)">Latest run</button>
+      <button class="ai-scope-btn" data-scope="last5"   onclick="setAiScope(this)">Last 5 runs</button>
+      <button class="ai-scope-btn" data-scope="last10"  onclick="setAiScope(this)">Last 10 runs</button>
+      <button class="ai-scope-btn" data-scope="filtered" onclick="setAiScope(this)">Filtered runs</button>
+      <button class="ai-scope-btn" data-scope="all"     onclick="setAiScope(this)">All runs</button>
+      <span id="ai-scope-info" style="font-size:11px;color:var(--muted);margin-left:6px"></span>
+    </div>
+
+    <div class="ai-body">
+      <!-- Quick prompt buttons -->
+      <div class="ai-quick-prompts">
+        <span style="font-size:11px;color:var(--muted);align-self:center">Quick:</span>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">Summarise performance</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">Identify bottlenecks</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">Compare with previous runs</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">SLA breach analysis</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">Throughput vs response time correlation</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">Recommend optimisations</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">Error rate root cause</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">TPH target feasibility (100 TPH with 1 VUser)</button>
+        <button class="ai-quick-btn" onclick="useQuickPrompt(this)">P90 vs P99 degradation pattern</button>
+      </div>
+
+      <!-- Custom prompt input -->
+      <div class="ai-prompt-row">
+        <textarea class="ai-input" id="ai-prompt" rows="2"
+          placeholder="Ask anything about your performance data… e.g. 'Why is the P90 response time 3x higher than the average?' or 'Is my 100 TPH target achievable?'"></textarea>
+        <button class="ai-run-btn" id="ai-run-btn" onclick="runAiAnalysis()">▶ Analyse</button>
+      </div>
+
+      <!-- Response area -->
+      <div class="ai-response" id="ai-response" style="display:none"></div>
+    </div>
+
+    <div class="ai-footer">
+      <span class="ai-tokens" id="ai-token-info"></span>
+      <button class="ai-copy-btn" id="ai-copy-btn" style="display:none" onclick="copyAiResponse()">📋 Copy</button>
+    </div>
+  </div>
+
+  <!-- AI history (last 5 analyses) -->
+  <div class="sec-lbl">Analysis History</div>
+  <div id="ai-history" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
+
 </main>
 
 <!-- ══════════════════════ RUN DETAIL MODAL ══════════════════════ -->
@@ -460,15 +553,15 @@ const TOOLS={
 
 // ── State ──────────────────────────────────────────────────────
 let allRuns=[], slaConfig={}, apmData={}, charts={};
-let activePct='p95', metricsActivePct='p95';
+let activePct='p90', metricsActivePct='p90';
 let sortKey='timestamp', sortAsc=false;
 
 // ── Percentile helpers ─────────────────────────────────────────
 const PCT_FIELD={
-  avg:'avg_response_time', p50:'p50_response_time', p75:'p75_response_time',
+  avg:'avg_response_time',
   p90:'p90_response_time', p95:'p95_response_time', p98:'p98_response_time', p99:'p99_response_time'
 };
-const PCT_LABEL={avg:'Avg RT',p50:'P50',p75:'P75',p90:'P90',p95:'P95',p98:'P98',p99:'P99'};
+const PCT_LABEL={avg:'Avg RT',p90:'P90',p95:'P95',p98:'P98',p99:'P99'};
 
 function getRtValue(run, pct){ return run[PCT_FIELD[pct]??'p95_response_time'] ?? run.avg_response_time ?? 0; }
 
@@ -502,10 +595,11 @@ function showSection(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('sec-'+name).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>{
-    if(t.textContent.trim().replace(/[⚡📋]/g,'').trim().toLowerCase().replace(/\s/g,'')=== name ||
+    if(t.textContent.trim().replace(/[⚡📋🤖]/g,'').trim().toLowerCase().replace(/\s/g,'')=== name ||
        t.id==='tab-apm'&&name==='apm') t.classList.add('active');
   });
   if(name==='metrics') renderMetricsTable();
+  if(name==='ai') updateAiScopeInfo();
   if(name==='runs') renderRunTable();
 }
 
@@ -799,8 +893,6 @@ function renderMetricsTable(){
       <td><span class="bp bp-${r.protocol.toLowerCase()}">${r.protocol}</span></td>
       <td>${r.scenario}</td>
       <td>${Math.round(r.avg_response_time||0)}</td>
-      <td>${Math.round(r.p50_response_time||r.avg_response_time||0)}</td>
-      <td>${Math.round(r.p75_response_time||r.p90_response_time||0)}</td>
       <td>${Math.round(r.p90_response_time||0)}</td>
       <td class="${metricsActivePct==='p95'?'pct-highlight':''}">${Math.round(r.p95_response_time||0)}</td>
       <td class="${metricsActivePct==='p98'?'pct-highlight':''}">${Math.round(r.p98_response_time||r.p99_response_time||0)}</td>
@@ -871,8 +963,6 @@ function openModal(runId){
       <div class="modal-section-title">Response Time Percentiles</div>
       <div class="modal-kpis">
         <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--blue)">${Math.round(r.avg_response_time||0)}</div><div class="modal-kpi-lbl">Avg (ms)</div></div>
-        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--cyan)">${Math.round(r.p50_response_time||r.avg_response_time||0)}</div><div class="modal-kpi-lbl">P50 (ms)</div></div>
-        <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--green)">${Math.round(r.p75_response_time||r.p90_response_time||0)}</div><div class="modal-kpi-lbl">P75 (ms)</div></div>
         <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--amber)">${Math.round(r.p90_response_time||0)}</div><div class="modal-kpi-lbl">P90 (ms)</div></div>
         <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--blue);font-size:24px">${Math.round(r.p95_response_time||0)}</div><div class="modal-kpi-lbl">P95 (ms)</div></div>
         <div class="modal-kpi"><div class="modal-kpi-val" style="color:var(--purple)">${Math.round(r.p98_response_time||r.p99_response_time||0)}</div><div class="modal-kpi-lbl">P98 (ms)</div></div>
@@ -1023,8 +1113,6 @@ function runsToRows(runs){
     'Environment':      r.environment,
     'VUsers':           r.vusers||0,
     'Avg RT (ms)':      Math.round(r.avg_response_time||0),
-    'P50 RT (ms)':      Math.round(r.p50_response_time||r.avg_response_time||0),
-    'P75 RT (ms)':      Math.round(r.p75_response_time||r.p90_response_time||0),
     'P90 RT (ms)':      Math.round(r.p90_response_time||0),
     'P95 RT (ms)':      Math.round(r.p95_response_time||0),
     'P98 RT (ms)':      Math.round(r.p98_response_time||r.p99_response_time||0),
@@ -1083,6 +1171,269 @@ function exportRunsCSV(){
 function exportRunsExcel(){
   downloadExcel(runsToRows(runTableRuns()),`hermes-runs-${stamp()}.xlsx`);
 }
+
+// ── AI Analysis ────────────────────────────────────────────────────────────
+let aiScope = 'latest';
+let aiHistory = [];
+
+function setAiScope(btn){
+  document.querySelectorAll('.ai-scope-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  aiScope = btn.dataset.scope;
+  updateAiScopeInfo();
+}
+
+function updateAiScopeInfo(){
+  const runs = getScopedRuns();
+  const el = document.getElementById('ai-scope-info');
+  if(el) el.textContent = `(${runs.length} run${runs.length!==1?'s':''})`;
+}
+
+function getScopedRuns(){
+  switch(aiScope){
+    case 'latest':   return allRuns.slice(0,1);
+    case 'last5':    return allRuns.slice(0,5);
+    case 'last10':   return allRuns.slice(0,10);
+    case 'filtered': return filteredRuns();
+    case 'all':      return allRuns;
+    default:         return allRuns.slice(0,5);
+  }
+}
+
+function useQuickPrompt(btn){
+  document.getElementById('ai-prompt').value = btn.textContent.trim();
+  document.getElementById('ai-prompt').focus();
+}
+
+function buildDataContext(runs){
+  if(!runs.length) return 'No run data available.';
+  const avg = a => a.length ? (a.reduce((s,v)=>s+v,0)/a.length).toFixed(1) : 0;
+  const slaMax = slaConfig.max_avg_rt || 2000;
+  const errMax = slaConfig.max_error_rate || 1;
+  const tphMin = slaConfig.min_tph || (slaConfig.min_tps||10)*3600;
+
+  const runSummaries = runs.map(r => ({
+    run_id:        r.run_id,
+    timestamp:     r.timestamp?.slice(0,16),
+    protocol:      r.protocol,
+    scenario:      r.scenario,
+    environment:   r.environment,
+    vusers:        r.vusers || 0,
+    avg_rt_ms:     Math.round(r.avg_response_time||0),
+    p90_rt_ms:     Math.round(r.p90_response_time||0),
+    p95_rt_ms:     Math.round(r.p95_response_time||0),
+    p99_rt_ms:     Math.round(r.p99_response_time||0),
+    max_rt_ms:     Math.round(r.max_response_time||0),
+    error_rate_pct: +r.error_rate.toFixed(3),
+    tph:           Math.round(r.tph||r.tps*3600),
+    total_tx:      r.total_transactions||0,
+    sla_passed:    r.sla_passed,
+  }));
+
+  const aggregates = runs.length > 1 ? {
+    avg_rt_avg:    +avg(runs.map(r=>r.avg_response_time||0)),
+    p90_rt_avg:    +avg(runs.map(r=>r.p90_response_time||0)),
+    p95_rt_avg:    +avg(runs.map(r=>r.p95_response_time||0)),
+    p99_rt_avg:    +avg(runs.map(r=>r.p99_response_time||0)),
+    error_rate_avg:+avg(runs.map(r=>r.error_rate||0)),
+    tph_avg:       +avg(runs.map(r=>r.tph||r.tps*3600)),
+    sla_pass_rate: `${(runs.filter(r=>r.sla_passed).length/runs.length*100).toFixed(0)}%`,
+  } : null;
+
+  return JSON.stringify({
+    scope: `${runs.length} run(s)`,
+    sla_config: { max_avg_rt_ms: slaMax, max_error_rate_pct: errMax, min_tph: tphMin },
+    aggregates,
+    runs: runSummaries,
+  }, null, 2);
+}
+
+function formatAiResponse(text){
+  if(!text) return '';
+  // Process line by line to avoid complex regex issues
+  const lines = text.split('\n');
+  const out = [];
+  let inList = false;
+
+  for(let i = 0; i < lines.length; i++){
+    let line = lines[i];
+
+    // Headings
+    if(line.startsWith('### ') || line.startsWith('## ') || line.startsWith('# ')){
+      if(inList){ out.push('</ul>'); inList=false; }
+      const txt = line.replace(/^#+\s+/, '');
+      out.push('<h3>' + txt + '</h3>');
+      continue;
+    }
+
+    // List items
+    if(line.match(/^[-*•]\s+/) ){
+      if(!inList){ out.push('<ul>'); inList=true; }
+      const txt = line.replace(/^[-*•]\s+/, '');
+      out.push('<li>' + txt + '</li>');
+      continue;
+    }
+
+    // Numbered list
+    if(line.match(/^\d+\.\s+/)){
+      if(!inList){ out.push('<ul>'); inList=true; }
+      const txt = line.replace(/^\d+\.\s+/, '');
+      out.push('<li>' + txt + '</li>');
+      continue;
+    }
+
+    // Close list if needed
+    if(inList && line.trim() === ''){ out.push('</ul>'); inList=false; }
+    else if(inList){ out.push('</ul>'); inList=false; }
+
+    // Blank line → paragraph break
+    if(line.trim() === ''){ out.push('<br>'); continue; }
+
+    // Regular line — apply inline formatting
+    out.push(line + '<br>');
+  }
+
+  if(inList) out.push('</ul>');
+
+  // Inline formatting on the joined result
+  let html = out.join('\n');
+  // Bold: **text**
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic: *text*
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Inline code: `text`
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  return html;
+}
+
+async function runAiAnalysis(){
+  const prompt = document.getElementById('ai-prompt').value.trim();
+  if(!prompt){ document.getElementById('ai-prompt').focus(); return; }
+
+  const runs = getScopedRuns();
+  if(!runs.length){
+    showAiResponse('⚠️ No runs available for analysis. Load some data first.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('ai-run-btn');
+  const statusEl = document.getElementById('ai-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Thinking…';
+  statusEl.textContent = 'ANALYSING';
+  statusEl.style.color = 'var(--amber)';
+  statusEl.style.background = 'rgba(245,158,11,.12)';
+  statusEl.style.borderColor = 'rgba(245,158,11,.3)';
+
+  const respEl = document.getElementById('ai-response');
+  respEl.style.display = 'block';
+  respEl.className = 'ai-response loading';
+  respEl.innerHTML = '🤖 Analysing your performance data…';
+
+  const dataCtx = buildDataContext(runs);
+  const systemPrompt = `You are an expert LoadRunner performance engineer and observability analyst.
+You are analysing real test results from the Hermes Automation CI/CD performance testing pipeline.
+The data includes LoadRunner metrics: response times (Avg, P90, P95, P99), error rates, throughput in TPH (Transactions Per Hour), and SLA pass/fail status.
+Key context:
+- TPH = Transactions Per Hour (not TPS)
+- The test uses 1 VUser per API script with pacing set to achieve 100 TPH target
+- Pacing formula: 3600 ÷ target_TPH = seconds per iteration (100 TPH = 36s pacing)
+- SLA thresholds are configurable in sla-load.json
+Provide concise, actionable, expert-level analysis. Use clear headings, bullet points where helpful.
+Quantify observations wherever possible. Be direct — no preamble.`;
+
+  const userMessage = `Here is the performance data:
+\`\`\`json
+${dataCtx}
+\`\`\`
+
+Question/Task: ${prompt}`;
+
+  try{
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    const data = await response.json();
+    if(data.error){ throw new Error(data.error.message); }
+
+    const text = data.content?.[0]?.text || 'No response received.';
+    const tokens = data.usage ? `Input: ${data.usage.input_tokens} tokens · Output: ${data.usage.output_tokens} tokens` : '';
+
+    showAiResponse(formatAiResponse(text), 'ok');
+    document.getElementById('ai-token-info').textContent = tokens;
+
+    // Save to history
+    aiHistory.unshift({ prompt, response: text, scope: aiScope, runs: runs.length, timestamp: new Date().toLocaleTimeString() });
+    if(aiHistory.length > 5) aiHistory.pop();
+    renderAiHistory();
+
+    statusEl.textContent = 'DONE';
+    statusEl.style.color = 'var(--green)';
+    statusEl.style.background = 'rgba(16,185,129,.12)';
+    statusEl.style.borderColor = 'rgba(16,185,129,.3)';
+
+  } catch(err){
+    showAiResponse(`❌ Error: ${err.message}<br><br>Make sure you are running this dashboard via a server that proxies the Anthropic API, or use the GitHub Pages deployment which has the API token injected at build time.`, 'error');
+    statusEl.textContent = 'ERROR';
+    statusEl.style.color = 'var(--red)';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Analyse';
+  }
+}
+
+function showAiResponse(html, type){
+  const el = document.getElementById('ai-response');
+  el.style.display = 'block';
+  el.className = `ai-response${type==='error'?' error':''}`;
+  el.innerHTML = html;
+  document.getElementById('ai-copy-btn').style.display = type!=='error' ? 'block' : 'none';
+}
+
+function copyAiResponse(){
+  const text = document.getElementById('ai-response').innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('ai-copy-btn');
+    btn.textContent = '✅ Copied';
+    setTimeout(()=>btn.textContent='📋 Copy', 2000);
+  });
+}
+
+function renderAiHistory(){
+  const el = document.getElementById('ai-history');
+  if(!aiHistory.length){ el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">No analyses yet — run your first query above.</div>'; return; }
+  el.innerHTML = aiHistory.map((h,i)=>`
+    <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;opacity:${1-(i*0.15)}">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--s2);border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;font-family:var(--mono);color:var(--muted)">${h.timestamp}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text)">${h.prompt}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--muted)">${h.runs} run(s) · ${h.scope}</span>
+        <button onclick="rerunHistory(${i})" style="padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:var(--s3);color:var(--muted);font-size:10px;cursor:pointer">↺ Re-run</button>
+      </div>
+      <div style="padding:12px 16px;font-size:12px;line-height:1.6;color:var(--text);max-height:160px;overflow-y:auto">${formatAiResponse(h.response)}</div>
+    </div>`).join('');
+}
+
+function rerunHistory(idx){
+  document.getElementById('ai-prompt').value = aiHistory[idx].prompt;
+  runAiAnalysis();
+}
+
+// Allow Ctrl+Enter to run analysis
+document.addEventListener('keydown', e=>{
+  if(e.ctrlKey && e.key==='Enter' && document.getElementById('sec-ai').classList.contains('active')){
+    runAiAnalysis();
+  }
+});
 
 // ── Main ───────────────────────────────────────────────────────
 async function init(){
