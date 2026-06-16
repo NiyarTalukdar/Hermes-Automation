@@ -13,11 +13,11 @@
 
 ## Why I built this
 
-At Chubb Insurance, performance testing had a real operational problem: test cycles took ~4 hours end-to-end, results lived in scattered Excel files, and APM data in AppDynamics had no programmatic connection to test execution. Every release required manual correlation between load test output and infrastructure metrics.
+While working with Load Runner for performance testing and analysis, I analyzed it had a real operational problem: test cycles took ~4 hours end-to-end, results lived in scattered Excel files, and APM data in AppDynamics had no programmatic connection to test execution. Every release required manual correlation between load test output and infrastructure metrics.
 
 I built Hermes to solve that — a pipeline that triggers LoadRunner, configures the scenario at runtime, validates SLAs automatically, pushes annotated metrics to any APM tool, and publishes results to a live dashboard. No manual steps between "trigger test" and "see results with APM context."
 
-The SLA thresholds, TPH targets, and test scenario designs reflect real BFSI non-functional requirements — authentication flows, policy management APIs, claims processing, and cloud migration workloads.
+The SLA thresholds, TPH targets, and test scenario designs reflect many real non-functional requirements — Eg- BSFI based (authentication flows, policy management APIs, claims processing, and cloud migration workloads)
 
 ---
 
