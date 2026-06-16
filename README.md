@@ -1,29 +1,35 @@
 # Hermes Automation
 
-> **Open-source LoadRunner CI/CD framework** — 25-parameter GitHub Actions workflows, 7-APM integration, AI-powered analysis, TPH-based SLA monitoring, and a live public dashboard. Production-tested on BFSI/Insurance workloads.
+> **Open-source LoadRunner CI/CD framework** — 25-parameter GitHub Actions workflows, 7-APM integration, AI-powered analysis, TPH-based SLA monitoring, and a live public dashboard. Designed for BFSI/Insurance workload patterns.
 
 [![Live Dashboard](https://img.shields.io/badge/Live_Dashboard-GitHub_Pages-6c63ff?style=flat-square&logo=github)](https://niyartalukdar.github.io/Hermes-Automation/)
 [![API Pipeline](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/lr-api-performance.yml/badge.svg)](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/lr-api-performance.yml)
 [![Web Pipeline](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/lr-web-performance.yml/badge.svg)](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/lr-web-performance.yml)
 [![Dashboard Deploy](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/publish-dashboard.yml/badge.svg)](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/publish-dashboard.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-![Made with](https://img.shields.io/badge/Made_with-PowerShell_·_Python_·_GitHub_Actions-blue?style=flat-square)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](https://github.com/NiyarTalukdar/Hermes-Automation/blob/main/LICENSE)
+[![Made with](https://img.shields.io/badge/Made_with-PowerShell_·_Python_·_GitHub_Actions-blue?style=flat-square)](https://github.com/NiyarTalukdar/Hermes-Automation)
+
+---
+
+## Why I built this
+
+At Chubb Insurance, performance testing had a real operational problem: test cycles took ~4 hours end-to-end, results lived in scattered Excel files, and APM data in AppDynamics had no programmatic connection to test execution. Every release required manual correlation between load test output and infrastructure metrics.
+
+I built Hermes to solve that — a pipeline that triggers LoadRunner, configures the scenario at runtime, validates SLAs automatically, pushes annotated metrics to any APM tool, and publishes results to a live dashboard. No manual steps between "trigger test" and "see results with APM context."
+
+The SLA thresholds, TPH targets, and test scenario designs reflect real BFSI non-functional requirements — authentication flows, policy management APIs, claims processing, and cloud migration workloads.
 
 ---
 
 ## What this achieves
 
-Built to solve a real problem at a BFSI/Insurance client (Chubb) — LoadRunner performance tests were run manually, results were scattered, and APM data lived in a different tool with no connection to test execution. This pipeline automates the full performance test lifecycle end-to-end:
-
 | Metric | Before | After |
-|--------|--------|-------|
+| --- | --- | --- |
 | Test cycle time | ~4 hours (manual) | ~12 minutes (automated) |
 | SLA reporting | Manual Excel | Auto-generated, per-run, in dashboard |
 | APM correlation | Manual, post-hoc | Automated annotation at test start/end |
 | Result visibility | Shared locally | Public dashboard, no login required |
 | Workflow parameters | Fixed in .lrs file | 25 runtime-configurable inputs |
-
-> Domain context: All scenarios are production-tested against BFSI/Insurance microservices — regulated, high-availability workloads covering authentication, policy management, and claims APIs.
 
 ---
 
@@ -66,10 +72,11 @@ dashboard/                      → GitHub Pages (public, no login)
 ## Key features
 
 ### Scenario control — equivalent to Performance Centre UI
+
 Every setting you'd configure manually in MicroFocus Performance Centre is now a GitHub Actions workflow input:
 
 | Category | Options |
-|----------|---------|
+| --- | --- |
 | **Scheduler** | `real_world` (ramp/steady/ramp-down) · `goal_oriented` (LR auto-scales VUsers to hit TPH target) · `basic` |
 | **Think time** | `as_recorded` · `ignore` · `multiply` · `random_percentage` · `fixed_seconds` |
 | **Pacing** | `immediately` · `fixed_delay` · `random_delay` · `fixed_from_iteration_start` · `random_from_iteration_start` |
@@ -79,11 +86,12 @@ Every setting you'd configure manually in MicroFocus Performance Centre is now a
 | **SLA breach** | `log_only` · `warn_and_log` · `fail_job` |
 | **APM tool** | Choose at run time — credentials auto-injected from secrets |
 
-### 7-APM integration — one workflow input switches everything
+### 7-APM integration — one config line switches everything
+
 Set `apm.tool` in `configs/project.json` once. Every subsequent run pushes metrics to that tool automatically. Switch tools by changing one line — no workflow changes needed.
 
 | Tool | Market position | Metric format |
-|------|----------------|---------------|
+| --- | --- | --- |
 | **Datadog** | 51% market share · cloud-native leader | `loadrunner.*` series API v2 |
 | **Dynatrace** | Gartner Leader 15 consecutive years | MINT line format · events/ingest |
 | **AppDynamics** | Cisco · enterprise Java/.NET | Custom Metrics REST API |
@@ -93,6 +101,7 @@ Set `apm.tool` in `configs/project.json` once. Every subsequent run pushes metri
 | **Grafana Cloud** | Prometheus-native · OSS-first | Remote write (Prom format) |
 
 ### Dashboard — live, public, no login
+
 → **[niyartalukdar.github.io/Hermes-Automation](https://niyartalukdar.github.io/Hermes-Automation/)**
 
 - **Percentile selector** — Avg / P90 / P95 / P98 / P99 (P90 default)
@@ -105,11 +114,12 @@ Set `apm.tool` in `configs/project.json` once. Every subsequent run pushes metri
 - **Light / Dark mode** — toggle persists in localStorage; charts redraw dynamically
 
 ### SLA validation — post-test, configurable breach behaviour
+
 The test **always runs to completion**. SLA checks run after. Three breach modes:
 
 ```
 log_only      → violations logged, job always exits 0
-warn_and_log  → GitHub ⚠️ annotations, job exits 0  
+warn_and_log  → GitHub ⚠️ annotations, job exits 0
 fail_job      → violations logged, job exits 1
 ```
 
@@ -127,12 +137,11 @@ Hermes-Automation/
 │       ├── lr-web-performance.yml
 │       └── publish-dashboard.yml
 ├── scripts/
-│   ├── push_metrics.py             ← universal APM dispatcher (7 tools)
 │   ├── configure-api-scenario.ps1
 │   ├── configure-web-scenario.ps1
 │   ├── run-lr-scenario.ps1
 │   ├── validate-sla.ps1
-│   ├── push_metrics.py             ← universal APM dispatcher
+│   ├── push_metrics.py             ← universal APM dispatcher (7 tools)
 │   ├── fetch_apm_metrics.py        ← dashboard APM data fetch
 │   └── update_dashboard.py
 ├── configs/
@@ -146,61 +155,31 @@ Hermes-Automation/
 ├── dashboard/
 │   ├── index.html
 │   └── data.json
-└── docs/
-    ├── SECRETS_SETUP.md            ← all secrets for all 7 APM tools
-    └── EXECUTION_GUIDE.md          ← step-by-step run guide with TPH examples            ← all secrets for all 7 APM tools
-    └── EXECUTION_GUIDE.md          ← step-by-step run guide with TPH examples
+├── EXECUTION_GUIDE.md
+├── SECRETS_SETUP.md
+└── LICENSE
 ```
 
 ---
 
-## Repo structure
-
-```
-Hermes-Automation/
-├── .github/
-│   └── workflows/
-│       ├── lr-api-performance.yml
-│       ├── lr-web-performance.yml
-│       └── publish-dashboard.yml
-├── scripts/
-│   ├── configure-api-scenario.ps1
-│   ├── configure-web-scenario.ps1
-│   ├── run-lr-scenario.ps1
-│   ├── validate-sla.ps1
-│   ├── push_metrics.py             ← scripts/push_metrics.py (universal APM dispatcher)
-│   ├── fetch_apm_metrics.py
-│   └── update_dashboard.py
-├── configs/
-│   ├── project.json
-│   ├── sla-load.json
-│   ├── sla-smoke.json
-│   ├── sla-stress.json
-│   ├── sla-spike.json
-│   ├── sla-endurance.json
-│   └── sla-web-load.json
-├── dashboard/
-│   ├── index.html
-│   └── data.json
-└── docs/
-    ├── SECRETS_SETUP.md
-    └── EXECUTION_GUIDE.md
-```
-
-
 ## Quick start
 
 ### 1. Set your APM tool
+
 Edit `configs/project.json`:
+
 ```json
 { "apm": { "tool": "dynatrace" } }
 ```
+
 Options: `datadog` · `dynatrace` · `appdynamics` · `newrelic` · `splunk` · `elastic` · `grafana` · `none`
 
 ### 2. Add secrets
-See [`docs/SECRETS_SETUP.md`](docs/SECRETS_SETUP.md) and [`docs/EXECUTION_GUIDE.md`](docs/EXECUTION_GUIDE.md) — includes credential tables for all 7 APM tools.
+
+See [`SECRETS_SETUP.md`](./SECRETS_SETUP.md) and [`EXECUTION_GUIDE.md`](./EXECUTION_GUIDE.md) — includes credential tables for all 7 APM tools.
 
 **LoadRunner (always required):**
+
 ```
 LR_LICENSE_SERVER   LR_CONTROLLER_HOST
 LR_SCRIPT_USERNAME  LR_SCRIPT_PASSWORD
@@ -208,32 +187,38 @@ TARGET_URL_STAGING  TARGET_URL_PROD
 ```
 
 **Per-user credentials (for OAuth / user-specific data):**
+
 ```
 LR_USER_1_USERNAME / LR_USER_1_PASSWORD  ...up to LR_USER_N
 ```
+
 Falls back to shared service account if not set.
 
 ### 3. Register self-hosted Windows runner
+
 ```
 Repo → Settings → Actions → Runners → New self-hosted runner
 Labels: self-hosted,loadrunner,windows
 ```
 
 ### 4. Enable GitHub Pages
+
 ```
 Repo → Settings → Pages → Source: GitHub Actions
 ```
 
 ### 5. Run a test
+
 ```
 Actions → LoadRunner API Performance Test → Run workflow
 ```
+
 Fill in: environment, scheduler mode, VUser count, ramp-up, steady state, think time, pacing, SLA breach action, APM tool.
 
-**For 1 VUser / 100 TPH target:**
+**Example — 1 VUser targeting 100 TPH:**
+
 - Scheduler: `basic` · VUsers: `1`
-- Pacing: `fixed_from_iteration_start` · Pacing seconds: `36`
-  _(formula: 3600 ÷ 100 TPH = 36 seconds)_
+- Pacing: `fixed_from_iteration_start` · Pacing seconds: `36` *(formula: 3600 ÷ 100 TPH = 36 seconds)*
 - Think time: `ignore`
 
 ---
@@ -241,7 +226,7 @@ Fill in: environment, scheduler mode, VUser count, ramp-up, steady state, think 
 ## Technology stack
 
 | Layer | Technology |
-|-------|-----------|
+| --- | --- |
 | Test execution | MicroFocus LoadRunner (VuGen · lr_batch · LRE) |
 | CI/CD | GitHub Actions (self-hosted Windows runner) |
 | Scripting | PowerShell 5.1+ · Python 3.11 |
@@ -254,15 +239,17 @@ Fill in: environment, scheduler mode, VUser count, ramp-up, steady state, think 
 
 ## Domain context
 
-This pipeline was designed and tested against BFSI/Insurance microservices — regulated, high-availability environments where performance SLAs are contractual, not aspirational. Test scenarios cover:
+This pipeline was designed for BFSI/Insurance workload patterns — regulated, high-availability environments where performance SLAs are contractual, not aspirational. Test scenario designs cover:
+
 - Authentication and identity (ADB2C, OAuth flows)
 - Policy management and rating APIs
 - Claims processing and document services
 - Modernisation workloads migrating from legacy to cloud-native
 
-All SLA thresholds, TPH targets, and error budgets reflect real BFSI non-functional requirements.
+SLA thresholds, TPH targets, and error budgets reflect real BFSI non-functional requirements.
 
 ---
 
 ## License
+
 MIT — fork and adapt freely.
