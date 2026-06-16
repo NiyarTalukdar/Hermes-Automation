@@ -1,6 +1,6 @@
 # Hermes Automation
 
-> **Open-source LoadRunner CI/CD framework** — 25-parameter GitHub Actions workflows, 7-APM integration, AI-powered analysis, TPH-based SLA monitoring, and a live public dashboard. Designed for BFSI/Insurance workload patterns.
+> **Open-source LoadRunner CI/CD framework** — 25-parameter GitHub Actions workflows, 7-APM integration, AI-powered analysis, TPH-based SLA monitoring, and a live public dashboard. Designed for enhanced analysis and providing one stop solution for all performance metrics.
 
 [![Live Dashboard](https://img.shields.io/badge/Live_Dashboard-GitHub_Pages-6c63ff?style=flat-square&logo=github)](https://niyartalukdar.github.io/Hermes-Automation/)
 [![API Pipeline](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/lr-api-performance.yml/badge.svg)](https://github.com/NiyarTalukdar/Hermes-Automation/actions/workflows/lr-api-performance.yml)
