@@ -32,6 +32,15 @@ The SLA thresholds, TPH targets, and test scenario designs reflect many real non
 | Workflow parameters | Fixed in .lrs file | 25 runtime-configurable inputs |
 
 ---
+## Screenshots
+
+### Live Dashboard
+![Hermes Automation Dashboard](dashboard/Dashboard-overview.png)
+
+### GitHub Actions Workflow Run
+![GitHub Actions Pipeline](dashboard/workflow-run.png)
+
+---
 
 ## Architecture
 
