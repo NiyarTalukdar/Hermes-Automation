@@ -248,14 +248,14 @@ Fill in: environment, scheduler mode, VUser count, ramp-up, steady state, think 
 
 ## Domain context
 
-This pipeline was designed for BFSI/Insurance workload patterns — regulated, high-availability environments where performance SLAs are contractual, not aspirational. Test scenario designs cover:
+This pipeline was designed initially for BFSI/Insurance workload patterns — regulated, high-availability environments where performance SLAs are contractual, not aspirational. Test scenario designs cover:
 
 - Authentication and identity (ADB2C, OAuth flows)
 - Policy management and rating APIs
 - Claims processing and document services
 - Modernisation workloads migrating from legacy to cloud-native
 
-SLA thresholds, TPH targets, and error budgets reflect real BFSI non-functional requirements.
+SLA thresholds, TPH targets, and error budgets reflect real BFSI non-functional requirements. Further releases can adapt to different verticals/domain and their non-functional requirements.
 
 ---
 
