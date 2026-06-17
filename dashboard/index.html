@@ -617,6 +617,22 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:11px;border-t
       <span id="ai-scope-info" style="font-size:11px;color:var(--muted);margin-left:6px"></span>
     </div>
 
+    <!-- API key row -->
+    <div id="ai-api-key-row" style="display:flex;align-items:center;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);background:var(--surface2)">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Anthropic API Key</span>
+      <input id="ai-api-key" type="password"
+        placeholder="sk-ant-... (stays in memory only, never stored)"
+        style="flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:6px 12px;font-size:12px;outline:none;font-family:var(--mono)"
+        oninput="saveApiKey(this.value)"
+        onfocus="this.style.borderColor='var(--accent)'"
+        onblur="this.style.borderColor='var(--border)'">
+      <span id="ai-key-status" style="font-size:10px;font-weight:700;white-space:nowrap;color:var(--muted)">No key set</span>
+      <a href="https://console.anthropic.com/settings/keys" target="_blank"
+        style="font-size:11px;color:var(--accent);text-decoration:none;white-space:nowrap;padding:4px 10px;border:1px solid rgba(108,99,255,.3);border-radius:6px;background:var(--accent-bg)">
+        Get key ↗
+      </a>
+    </div>
+
     <div class="ai-body">
       <!-- Quick prompt buttons -->
       <div class="ai-quick-prompts">
@@ -1309,6 +1325,23 @@ function exportRunsExcel(){
 // ── AI Analysis ────────────────────────────────────────────────────────────
 let aiScope = 'latest';
 let aiHistory = [];
+let _apiKey = '';
+
+function saveApiKey(val){
+  _apiKey = val.trim();
+  const el = document.getElementById('ai-key-status');
+  if(!el) return;
+  if(_apiKey.startsWith('sk-ant-') && _apiKey.length > 20){
+    el.textContent = '✅ Key ready';
+    el.style.color = 'var(--green)';
+  } else if(_apiKey.length > 0){
+    el.textContent = '⚠️ Check key format';
+    el.style.color = 'var(--amber)';
+  } else {
+    el.textContent = 'No key set';
+    el.style.color = 'var(--muted)';
+  }
+}
 
 function setAiScope(btn){
   document.querySelectorAll('.ai-scope-btn').forEach(b=>b.classList.remove('active'));
@@ -1485,11 +1518,36 @@ ${dataCtx}
 Question/Task: ${prompt}`;
 
   try{
+    // Check API key first
+    const keyToUse = _apiKey || document.getElementById('ai-api-key')?.value?.trim() || '';
+    if(!keyToUse || !keyToUse.startsWith('sk-ant-')){
+      showAiResponse(
+        '🔑 <strong>API key required</strong><br><br>' +
+        'Enter your Anthropic API key in the field above to use AI Analysis.<br><br>' +
+        '1. Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">console.anthropic.com/settings/keys</a><br>' +
+        '2. Create a new key (free tier available)<br>' +
+        '3. Paste it in the field above — it stays in memory only, never sent anywhere except directly to Anthropic',
+        'error'
+      );
+      btn.disabled = false;
+      btn.textContent = '▶ Analyse';
+      statusEl.textContent = 'READY';
+      statusEl.style.color = '#a5b4fc';
+      statusEl.style.background = 'rgba(99,102,241,.12)';
+      statusEl.style.borderColor = 'rgba(99,102,241,.3)';
+      return;
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': keyToUse,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-allow-browser': 'true',
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20251001',
         max_tokens: 1000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
@@ -1516,7 +1574,18 @@ Question/Task: ${prompt}`;
     statusEl.style.borderColor = 'rgba(16,185,129,.3)';
 
   } catch(err){
-    showAiResponse(`❌ Error: ${err.message}<br><br>Make sure you are running this dashboard via a server that proxies the Anthropic API, or use the GitHub Pages deployment which has the API token injected at build time.`, 'error');
+    let errMsg = `❌ <strong>Error:</strong> ${err.message}<br><br>`;
+    if(err.message.includes('fetch') || err.message.includes('network') || err.message.toLowerCase().includes('failed')){
+      errMsg += '<strong>This is a CORS/network error.</strong> To fix:<br>' +
+        '1. Make sure your API key is entered above (starts with <code>sk-ant-</code>)<br>' +
+        '2. The key must have permission to call <code>claude-sonnet-4-5-20251001</code><br>' +
+        '3. Check <a href="https://status.anthropic.com" target="_blank" style="color:var(--accent)">status.anthropic.com</a> for outages';
+    } else if(err.message.includes('401') || err.message.includes('authentication')){
+      errMsg += 'Your API key appears invalid. Check it at <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">console.anthropic.com</a>';
+    } else if(err.message.includes('429')){
+      errMsg += 'Rate limit reached. Wait a moment and try again.';
+    }
+    showAiResponse(errMsg, 'error');
     statusEl.textContent = 'ERROR';
     statusEl.style.color = 'var(--red)';
   } finally {
