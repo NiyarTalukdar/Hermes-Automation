@@ -220,7 +220,7 @@ After the run, click the workflow run → **Summary** tab. You'll see:
 ### Dashboard (GitHub Pages)
 
 ```
-https://niyartalukdar.github.io/PerfMation/
+https://niyartalukdar.github.io/Hermes-Automation/
 ```
 
 - **Overview tab** — LR KPI cards + APM snapshot for your integrated tool
